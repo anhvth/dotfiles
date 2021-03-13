@@ -79,15 +79,6 @@
 	zle -N add_sudo
 	bindkey "^s" add_sudo
 
-    function ctrl_e(){
-        BUFFER="sh run.sh"
-        zle accept-line
-    }
-    zle -N ctrl_e
-    bindkey "^e" ctrl_e
-
-
-
 # Git-rs
 	function add_gitrs() {
         BUFFER="rs $BUFFER:$(pwd)/ $(pwd)/"
