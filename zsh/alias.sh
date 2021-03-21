@@ -206,3 +206,4 @@ kill-all-python(){
 alias neovim=nvim
 alias vi=nvim
 alias v=nvim
+alias av="python -m avcv.run"
