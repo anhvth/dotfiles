@@ -54,3 +54,4 @@ if [[ "${terminfo[kcud1]}" != "" ]]; then
 fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+export PATH=$PATH:$HOME/miniconda3/

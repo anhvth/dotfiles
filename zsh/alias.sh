@@ -207,3 +207,4 @@ alias neovim=nvim
 alias vi=nvim
 alias v=nvim
 alias av="python -m avcv.run"
+alias autossh="autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -L $1"
