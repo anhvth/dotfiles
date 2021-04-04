@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Latest-Generated",
+            "type": "python",
+            "request": "launch",
+            "program": "tools/pytorch2onnx.py",
+            "console": "integratedTerminal",
+            "args": [
+                "configs/road_seg/v1.py",
+                "--checkpoint",
+                "work_dirs/v1-finetune/latest.pth"
+            ]
+        }
+    ]
+}
