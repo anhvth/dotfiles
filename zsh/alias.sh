@@ -227,3 +227,6 @@ av parse_debug_command -a $ori_cmd
 alias v2i="av video_to_images  -a"
 alias i2v="av images_to_video  -a"
 
+assh(){
+autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
+}
