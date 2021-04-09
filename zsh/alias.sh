@@ -230,3 +230,11 @@ alias i2v="av images_to_video  -a"
 assh(){
 autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
 }
+
+
+rsab(){
+rs $1 ~/.cache/sync
+rs ~/.cache/sync $2
+
+}
+
