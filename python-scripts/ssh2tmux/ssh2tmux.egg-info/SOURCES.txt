@@ -1,6 +1,0 @@
-setup.py
-ssh2tmux.egg-info/PKG-INFO
-ssh2tmux.egg-info/SOURCES.txt
-ssh2tmux.egg-info/dependency_links.txt
-ssh2tmux.egg-info/entry_points.txt
-ssh2tmux.egg-info/top_level.txt
