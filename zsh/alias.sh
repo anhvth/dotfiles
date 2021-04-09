@@ -207,26 +207,23 @@ alias neovim=nvim
 alias vi=nvim
 alias v=nvim
 alias av="python -m avcv.run"
-alias autossh="autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -L $1"
 
 
-ip(){
-    str="ipython -i $1 -- ${@:2}"
-    eval $str
-    echo $str
-}
-
-
+#ip(){
+#    str="ipython -i $1 -- ${@:2}"
+#    eval $str
+#    echo $str
+#}
 dpython(){
 
-ori_cmd="python "$@""
-echo $ori_cmd
-av parse_debug_command -a $ori_cmd
+    ori_cmd="python "$@""
+    echo $ori_cmd
+    av parse_debug_command -a $ori_cmd
 }
 
 alias v2i="av video_to_images  -a"
 alias i2v="av images_to_video  -a"
 
 assh(){
-autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
+    autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
 }
