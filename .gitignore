@@ -13,3 +13,4 @@ code-server/config/logs/
 **/*.dll
 code-server/config/extensions
 .DS_Store
+ripgrep_11.0.2_amd64.deb
