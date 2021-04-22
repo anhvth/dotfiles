@@ -15,7 +15,7 @@
 
 		if [ -z "$BUFFER" ];
 			then
-				BUFFER="git add -A && git commit -v && git push"
+				BUFFER="git add -A && git commit -v "
 				# BUFFER="git add -A && git commit -v"
 		fi
 				

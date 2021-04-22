@@ -215,10 +215,14 @@ alias av="python -m avcv.run"
 #    echo $str
 #}
 dpython(){
-
     ori_cmd="python "$@""
     echo $ori_cmd
     av parse_debug_command -a $ori_cmd
+}
+vs_run(){
+    ori_cmd="$@"
+    # echo $ori_cmd
+    av change_vscode_run_cmd -a $ori_cmd
 }
 
 alias v2i="av video_to_images  -a"
