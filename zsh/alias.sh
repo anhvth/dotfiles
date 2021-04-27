@@ -206,27 +206,7 @@ kill-all-python(){
 alias neovim=nvim
 alias vi=nvim
 alias v=nvim
-alias av="python -m avcv.run"
 
-
-#ip(){
-#    str="ipython -i $1 -- ${@:2}"
-#    eval $str
-#    echo $str
-#}
-dpython(){
-    ori_cmd="python "$@""
-    echo $ori_cmd
-    av parse_debug_command -a $ori_cmd
-}
-vs_run(){
-    ori_cmd="$@"
-    # echo $ori_cmd
-    av change_vscode_run_cmd -a $ori_cmd
-}
-
-alias v2i="av video_to_images  -a"
-alias i2v="av images_to_video  -a"
 
 assh(){
     autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
@@ -239,3 +219,6 @@ rs ~/.cache/sync $2
 
 }
 
+# if [ -f "~/avcv/alias.sh" ]; then
+source ~/avcv/alias.sh
+# fi
