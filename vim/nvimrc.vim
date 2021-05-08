@@ -130,18 +130,17 @@ if empty(glob('~/.local/share/nvim/plugged'))
 endif
 call plug#begin('~/.local/share/nvim/plugged')
     " install deoplete"
-    if has('nvim')
-      Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
-    else
-      Plug 'Shougo/deoplete.nvim'
-      Plug 'roxma/nvim-yarp'
-      Plug 'roxma/vim-hug-neovim-rpc'
-    endif
+    " if has('nvim')
+    Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+    " else
+    "   Plug 'Shougo/deoplete.nvim'
+    "   Plug 'roxma/nvim-yarp'
+    "   Plug 'roxma/vim-hug-neovim-rpc'
+    " endif
 
     Plug 'roxma/nvim-yarp'
     Plug 'roxma/vim-hug-neovim-rpc'
-    "     let g:deoplete#enable_at_startup = 1
-    "     Plug 'deoplete-plugins/deoplete-jedi'
+
     Plug 'junegunn/fzf'
     Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
     Plug 'google/yapf', { 'rtp': 'plugins/vim', 'for': 'python' }
