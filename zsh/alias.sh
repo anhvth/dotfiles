@@ -219,6 +219,11 @@ rs ~/.cache/sync $2
 
 }
 
-# if [ -f "~/avcv/alias.sh" ]; then
+use-ssh(){
+    root=$(pwd)
+    cd $HOME/.ssh
+    rm config
+    cp config_$1 config
+    cd $root
+}
 source ~/avcv/alias.sh
-# fi

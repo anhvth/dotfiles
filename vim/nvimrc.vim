@@ -129,10 +129,15 @@ if empty(glob('~/.local/share/nvim/plugged'))
   autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 call plug#begin('~/.local/share/nvim/plugged')
-    "if has('nvim')
-    "  Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
-    "else
-    "     Plug 'Shougo/deoplete.nvim'
+    " install deoplete"
+    if has('nvim')
+      Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+    else
+      Plug 'Shougo/deoplete.nvim'
+      Plug 'roxma/nvim-yarp'
+      Plug 'roxma/vim-hug-neovim-rpc'
+    endif
+
     Plug 'roxma/nvim-yarp'
     Plug 'roxma/vim-hug-neovim-rpc'
     "     let g:deoplete#enable_at_startup = 1
