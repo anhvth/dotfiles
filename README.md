@@ -11,3 +11,9 @@ git clone https://github.com/anhvth/dotfiles ~/dotfiles --single-branch && cd ~/
  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
  ~/.fzf/install
 ```
+# Cheat sheet
+Start vscode-server-web
+
+```bash
+curl -fsSL https://code-server.dev/install.sh | sh && (code-server --bind-addr 0.0.0.0:8080 . | cat ~/.config/code-server/config.yaml)
+```
