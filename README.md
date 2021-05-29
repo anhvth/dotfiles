@@ -1,6 +1,8 @@
 # Installation
 ```bash
 git clone https://github.com/anhvth/dotfiles ~/dotfiles --single-branch && cd ~/dotfiles && ./install.sh
+git clone https://github.com/anhvth/avcv.git ~/avcv && pip install -e ~/avcv
+
 ```
 
 
