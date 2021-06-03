@@ -131,7 +131,7 @@ endif
 call plug#begin('~/.local/share/nvim/plugged')
     " install deoplete"
     " if has('nvim')
-    Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
+    "     Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
     " else
     "   Plug 'Shougo/deoplete.nvim'
     "   Plug 'roxma/nvim-yarp'

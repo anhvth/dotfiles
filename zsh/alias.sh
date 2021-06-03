@@ -208,17 +208,6 @@ alias vi=nvim
 alias v=nvim
 
 
-assh(){
-    autossh -f -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" $1
-}
-
-
-rsab(){
-rs $1 ~/.cache/sync
-rs ~/.cache/sync $2
-
-}
-
 use-ssh(){
     root=$(pwd)
     cd $HOME/.ssh
@@ -229,3 +218,12 @@ use-ssh(){
 source ~/avcv/alias.sh
 
 export PATH=$PATH:$HOME/miniconda3/bin
+
+rss(){
+hostname=$(cat ~/.ssh/config | grep "Host "| fzf | awk {'print $2'})
+filename=$(ls | fzf)
+BUFFER="rs $filename $hostname:/"
+zle accept-line
+
+}
+

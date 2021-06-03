@@ -79,10 +79,20 @@
 	zle -N add_sudo
 	bindkey "^s" add_sudo
 
-# Git-rs
-	function add_gitrs() {
-        BUFFER="rs $BUFFER:$(pwd)/ $(pwd)/"
+	function rs_push() {
+        filename=$(ls | fzf)
+        hostname=$(cat ~/.ssh/config | grep "Host "| fzf | awk {'print $2'})
+        BUFFER="rs $filename $hostname:/"
 		zle end-of-line
 	}
-	zle -N add_gitrs
-	bindkey "^u" add_gitrs
+	zle -N rs_push
+	bindkey "^u" rs_push
+
+	function rs_pull() {
+        hostname=$(cat ~/.ssh/config | grep "Host "| fzf | awk {'print $2'})
+        BUFFER="rs $hostname:/"
+		zle end-of-line
+	}
+	zle -N rs_pull
+	bindkey "^y" rs_pull
+
