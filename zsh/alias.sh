@@ -227,3 +227,8 @@ zle accept-line
 
 }
 
+rsab(){
+rs $1 ~/.cache/sync
+rs ~/.cache/sync $2
+
+}
