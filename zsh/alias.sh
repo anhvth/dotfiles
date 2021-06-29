@@ -15,7 +15,7 @@ alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore'  speak:/home/haianh/gitprojects/ /home/haianh/gitprojects"
 alias update-dotfiles="cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd"
 absp(){
-    echo $(pwd)/$(fzf)
+    echo $cname":"$(pwd)/$(fzf)
 }
 c() {
     cd $1;

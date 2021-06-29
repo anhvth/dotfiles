@@ -32,7 +32,7 @@ source $HOME/dotfiles/zsh/plugins/oh-my-zsh/lib/history.zsh
 source $HOME/dotfiles/zsh/plugins/oh-my-zsh/lib/key-bindings.zsh
 source $HOME/dotfiles/zsh/plugins/oh-my-zsh/lib/completion.zsh
 source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
-#source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
