@@ -54,10 +54,5 @@ if [[ "${terminfo[kcud1]}" != "" ]]; then
 fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-export PATH=$PATH:$HOME/miniconda3/bin
 
 
-#if test -z $env_name
-#then
-#  atv $env_name
-#fi
