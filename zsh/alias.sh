@@ -13,6 +13,12 @@ alias ju="jupyter lab --allow-root --ip 0.0.0.0 --port "
 alias dk="docker kill"
 alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore' "
+
+rs-git-sync(){
+    x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2"
+    watch $x
+}
+
 alias update-dotfiles="cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd"
 absp(){
     echo $cname":"$(pwd)/$(fzf)
