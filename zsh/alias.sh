@@ -15,7 +15,7 @@ alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore' "
 
 rs-git-sync(){
-    x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2"
+    x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2 --delete"
     watch $x
 }
 
