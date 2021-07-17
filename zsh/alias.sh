@@ -215,7 +215,6 @@ use-ssh(){
     cp config_$1 config
     cd $root
 }
-source ~/avcv/alias.sh
 
 export PATH=$PATH:$HOME/miniconda3/bin
 
