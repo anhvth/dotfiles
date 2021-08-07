@@ -2,12 +2,12 @@
 if [ -x "$(command -v brew)" ]; then
     install_command="brew install " 
     os="mac"
-elif [ -x "$(command -v sudo)" ]; then
-    install_command="sudo apt-get install -y "
-    os="sudo-ubuntu"
-    sudo apt-get update
-	sudo add-apt-repository ppa:neovim-ppa/stable
-	sudo dpkg -i ripgrep_11.0.2_amd64.deb
+elif [ -x "$(command -v )" ]; then
+    install_command=" apt-get install -y "
+    os="-ubuntu"
+     apt-get update
+	 add-apt-repository ppa:neovim-ppa/stable
+	 dpkg -i ripgrep_11.0.2_amd64.deb
 else
     os="ubuntu"
     apt-get update
@@ -64,7 +64,7 @@ else
     then
         apt-get install ripgrep_11.0.2_amd64.deb -y
     else
-        sudo apt-get install ripgrep_11.0.2_amd64.deb -y
+         apt-get install ripgrep_11.0.2_amd64.deb -y
     fi
 fi
 
@@ -78,4 +78,4 @@ chsh -s /bin/zsh
 
 git config --global user.email "anhvth.226@gmail.com"
 git config --global user.name "anh vo"   
-git config --global core.editor "nvim"
+git config --global core.editor "vim"

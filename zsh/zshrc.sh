@@ -56,3 +56,4 @@ fi
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 
+export PATH=$PATH:$HOME/dotfiles/squashfs-root/usr/bin/
