@@ -3,7 +3,7 @@ if [ -x "$(command -v brew)" ]; then
     install_command="brew install " 
     os="mac"
 elif [ -x "$(command -v )" ]; then
-    install_command=" apt-get install -y "
+    install_command=" sudo apt-get install -y "
     os="-ubuntu"
      apt-get update
 	 add-apt-repository ppa:neovim-ppa/stable
@@ -11,7 +11,7 @@ elif [ -x "$(command -v )" ]; then
 else
     os="ubuntu"
     apt-get update
-    install_command="apt-get install -y "
+    install_command="sudo apt-get install -y "
 	dpkg -i ./bin/ripgrep_11.0.2_amd64.deb
 fi
 echo "use install command:"$install_command
