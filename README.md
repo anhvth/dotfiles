@@ -13,6 +13,12 @@ git clone https://github.com/anhvth/avcv.git ~/avcv && pip install -e ~/avcv
  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
  ~/.fzf/install
 ```
+tmux
+``bash
+wget https://raw.githubusercontent.com/anhvth/dotfiles/main/tmux/tmux.conf -O ~/.tmux.conf
+``
+
+
 # Cheat sheet
 Start vscode-server-web
 
