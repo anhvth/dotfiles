@@ -14,9 +14,9 @@ git clone https://github.com/anhvth/avcv.git ~/avcv && pip install -e ~/avcv
  ~/.fzf/install
 ```
 tmux
-``bash
+```bash
 wget https://raw.githubusercontent.com/anhvth/dotfiles/main/tmux/tmux.conf -O ~/.tmux.conf
-``
+```
 
 
 # Cheat sheet
