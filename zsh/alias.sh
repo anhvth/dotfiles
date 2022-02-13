@@ -238,4 +238,4 @@ rs ~/.cache/sync $2
 
 }
 
-alias convert_png2jpg="find kitti_data/ -name '*.png' | parallel 'convert -quality 92 -sampling-factor 2x2,1x1,1x1 {.}.png {.}.jpg && rm {}'"
+alias convert_png2jpg="find ./ -name '*.png' | parallel 'convert -quality 92 -sampling-factor 2x2,1x1,1x1 {.}.png {.}.jpg && rm {}'"
