@@ -279,3 +279,4 @@ pyf(){
 cu(){
     export CUDA_VISIBLE_DEVICES=$1
 }
+alias what-is-my-ip="wget -qO- https://ipecho.net/plain ; echo"
