@@ -8,12 +8,13 @@ alias tb='tensorboard --logdir '
 alias ta="tmux a -t "
 alias tk="tmux kill-session -t"
 alias i="ipython"
+alias iav="ipython --profile av"
 alias checksize="du -h ./ | sort -rh "
 alias ju="jupyter lab --allow-root --ip 0.0.0.0 --port "
 alias dk="docker kill"
 alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore' "
-
+alias nb-clean="jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace"
 rs-git-sync(){
     x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2 --delete"
     watch $x
@@ -204,9 +205,12 @@ rs-current-dir(){
     echo $s
 }
 
-kill-all-python(){
- ps aux | grep -i python| awk '{print $2}' | xargs -r sudo kill -9
+kill-all-python-except-jupyter(){
+    ps aux | grep -i python| grep -wv jupyter | grep $USER|awk '{print $2}' | xargs -r kill -9
+     ps aux | grep -i python| grep -wv jupyter |awk '{print $2}' | xargs -r kill -9
 }
+
+
 # AG The Silver Searcher
 
 alias neovim=nvim
@@ -237,7 +241,6 @@ rs $1 ~/.cache/sync
 rs ~/.cache/sync $2
 
 }
-ngrok=$HOME/dotfiles/utils/ngrok
 
 wget-rs(){
     tmp=$(mktemp)
@@ -256,3 +259,23 @@ convert2mp4(){
     ffmpeg -i $1 -c:v vp9 -c:a libvorbis $2
 }
 
+
+alias convert_png2jpg="find ./ -name '*.png' | parallel 'convert -quality 92 -sampling-factor 2x2,1x1,1x1 {.}.png {.}.jpg && rm {}'"
+convert2mp4(){
+    ffmpeg -i $1 -c:v vp9 -c:a libvorbis $2
+}
+
+ju-convert(){
+    echo "Convert "$1"To python"
+    jupyter nbconvert $1 --to python
+}
+
+
+pyf(){
+    echo "Sort import and format "$1
+    isort $1 && vi -c YAPF $1 -c wq
+}
+
+cu(){
+    export CUDA_VISIBLE_DEVICES=$1
+}
