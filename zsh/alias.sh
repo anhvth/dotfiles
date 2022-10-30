@@ -237,3 +237,22 @@ rs $1 ~/.cache/sync
 rs ~/.cache/sync $2
 
 }
+ngrok=$HOME/dotfiles/utils/ngrok
+
+wget-rs(){
+    tmp=$(mktemp)
+    echo "Download $1 in to $tmp"
+    wget $1 -O $tmp
+    rs $tmp $2
+}
+
+# some more ls aliases
+
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+convert2mp4(){
+    ffmpeg -i $1 -c:v vp9 -c:a libvorbis $2
+}
+
