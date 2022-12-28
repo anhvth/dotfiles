@@ -15,6 +15,7 @@ alias dk="docker kill"
 alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore' "
 alias nb-clean="jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace"
+alias gpus="watch -n0.1 nvidia-smi"
 rs-git-sync(){
     x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2 --delete"
     watch $x
@@ -207,9 +208,12 @@ rs-current-dir(){
 
 kill-all-python-except-jupyter(){
     ps aux | grep -i python| grep -wv jupyter | grep $USER|awk '{print $2}' | xargs -r kill -9
-     ps aux | grep -i python| grep -wv jupyter |awk '{print $2}' | xargs -r kill -9
+    #  ps aux | grep -i python |awk '{print $2}' | xargs -r kill -9
 }
 
+kill-all-python-jupyter(){
+     ps aux | grep -i python |awk '{print $2}' | xargs -r kill -9
+}
 
 # AG The Silver Searcher
 
@@ -280,3 +284,4 @@ cu(){
     export CUDA_VISIBLE_DEVICES=$1
 }
 alias what-is-my-ip="wget -qO- https://ipecho.net/plain ; echo"
+alias run-list-cmd="python $HOME/dotfiles/tools/run_list_commands.py"
