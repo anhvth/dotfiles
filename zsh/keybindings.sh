@@ -15,7 +15,7 @@
 
 		if [ -z "$BUFFER" ];
 			then
-				BUFFER="git add -A && git commit -v "
+				BUFFER="git add -A && git commit -v && git push"
 				# BUFFER="git add -A && git commit -v"
 		fi
 				
@@ -23,6 +23,12 @@
 	}
 	zle -N git_prepare
 	bindkey "^g" git_prepare
+    
+	function git_sync() {
+        BUFFER="git pull && git add -A && git commit -m 'code sync' && git push"
+    }
+	zle -N git_sync
+	bindkey "^p" git_sync
 
 # home
 	#function goto_home() { 
