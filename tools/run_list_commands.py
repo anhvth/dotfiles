@@ -14,25 +14,35 @@ args = parser.parse_args()
 args.done_log = "/tmp/{args.name}.done"
 args.gpus = [int(x) for x in args.gpus.split(',')]
 
-cmds = open(args.listcmd).readlines()
+list_commands = open(args.listcmd).readlines()
 
-list_cmds_by_process = {i:[] for i in range(args.num_workers)}
-for i, cmd in enumerate(cmds):
+num_cpu = os.cpu_count()
+num_cpu_per_worker = num_cpu / args.num_workers
+workerid_to_range_cpu = {i:[int(i*num_cpu_per_worker), int((i+1)*num_cpu_per_worker)] for i in range(args.num_workers)}
+
+
+dict_tmux_id_to_list_commands = {i:[] for i in range(args.num_workers)}
+for process_id, cmd in enumerate(list_commands):
+    tmux_id = process_id % args.num_workers
+    cpu_list = workerid_to_range_cpu[tmux_id]
+
     cmd = cmd.strip()
-    gpu = args.gpus[i % len(args.gpus)]
-    cmd = f'CUDA_VISIBLE_DEVICES={gpu} {cmd}'
-    list_cmds_by_process[i % args.num_workers].append(cmd)
+    
+    gpu = args.gpus[tmux_id % len(args.gpus)]
+    cmd = f'CUDA_VISIBLE_DEVICES={gpu} taskset --cpu-list {cpu_list[0]}-{cpu_list[1]} {cmd}'
+    dict_tmux_id_to_list_commands[tmux_id % args.num_workers].append(cmd)
 
-print("Summary: ", "GPUS: ", args.gpus, "Num workers: ", args.num_workers, "Num cmds: ", len(cmds))
-
-for i, cmds in list_cmds_by_process.items():
-    with open('/tmp/listcmd_{}.txt'.format(i), 'w') as f:
-        for cmd in cmds:
-            f.write(cmd + '\n')
-    if i == 0:
+print("Summary: ", "GPUS: ", args.gpus, "Num workers: ", args.num_workers, "Num cmds: ", len(list_commands))
+# print(f"{workerid_to_range_cpu=}")
+for tmux_id, list_commands in dict_tmux_id_to_list_commands.items():
+    
+    with open('/tmp/listcmd_{}.txt'.format(tmux_id), 'w') as f:
+        for cmd in list_commands:
+            f.write(f'{cmd}\n')
+    if tmux_id == 0:
         tmuxcmd = f"tmux new -s {args.name} -d 'sh /tmp/listcmd_0.txt'"
     else:
-        tmuxcmd = f"tmux new-window -t {args.name} -n 'window-{i}' 'sh /tmp/listcmd_{i}.txt'"
+        tmuxcmd = f"tmux new-window -t {args.name} -n 'window-{tmux_id}' 'sh /tmp/listcmd_{tmux_id}.txt'"
     print('Running: ', tmuxcmd)
     if not args.dry_run:
         os.system(tmuxcmd)
