@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "dotfiles"
+  site-url: "https://anhvth.github.io/dotfiles"
+  description: "tools"
+  repo-branch: main
+  repo-url: "https://github.com/anhvth/dotfiles"
