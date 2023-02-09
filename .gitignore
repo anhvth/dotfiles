@@ -14,3 +14,4 @@ code-server/config/logs/
 code-server/config/extensions
 .DS_Store
 ripgrep_11.0.2_amd64.deb
+.vscode
