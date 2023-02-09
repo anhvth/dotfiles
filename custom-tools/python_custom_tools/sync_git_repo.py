@@ -1,3 +1,15 @@
+import os
+
+import os
+import subprocess
+
+def is_folder_changed(folder):
+    result = subprocess.run(['fswatch', '-r', folder, '-1'], capture_output=True, text=True)
+    if result.returncode == 0:
+        return True
+    else:
+        return False
+
 def main():
     import time
     from loguru import logger
@@ -40,11 +52,15 @@ def main():
 
             else:
                 cmd = f"git ls-files > /tmp/gitls && rsync -avP --delay-updates  --include-from /tmp/gitls --filter=':- .gitignore' --exclude '.git'  {local_dir}/ {remote_server_name}:{remote_dir}/"
+                # Use fswatch to check if there is any change in the local directory
+                # if there is any change, then push the code to remote server
+
                 if args.loop:
                     while True:
-                        os.system(cmd)
-                        logger.info('Push code to remote server, this action may create trash on remote server, use git status to track new files')
-                        time.sleep(1)
+                        if is_folder_changed(local_dir):
+                            logger.info('File changed, push code to remote server, this action may create trash on remote server, use git status to track new files')
+                            os.system(cmd)
+                            # time.sleep(1)
                 else:
                     os.system(cmd)
                 logger.info('Push code to remote server, this action may create trash on remote server, use git status to track new files')
