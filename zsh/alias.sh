@@ -285,3 +285,18 @@ cu(){
 }
 alias what-is-my-ip="wget -qO- https://ipecho.net/plain ; echo"
 alias run-list-cmd="python $HOME/dotfiles/tools/run_list_commands.py"
+
+catssh(){
+    # zsh
+    # Check if help
+    num_of_args=$#
+    if [ $num_of_args -lt 3 ]; then
+        echo "catssh <file> <machine> <target_file>"
+        return
+    fi
+
+    FILE=$1
+    MACHINE=$2
+    TARGET_FILE=$3
+    cat $FILE | ssh $MACHINE "cat > $TARGET_FILE"
+}
