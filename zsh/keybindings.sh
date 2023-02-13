@@ -29,6 +29,8 @@
     }
 	zle -N git_sync
 	bindkey "^p" git_sync
+# synccode
+    
 
 # home
 	#function goto_home() { 
@@ -102,3 +104,10 @@
 	zle -N rs_pull
 	bindkey "^y" rs_pull
 
+# Command
+	function remote_config(){
+		BUFFER="~/.remote_setup.sh"
+		zle accept-line
+	}
+	zle -N remote_config
+	bindkey "^z" remote_config

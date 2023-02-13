@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--mode', type=str, choices=['pull', 'push', 'git'], default='push')
     parser.add_argument('--delete', action='store_true', default=False)
     parser.add_argument('--loop', action='store_true', default=False)
+    parser.add_argument('--exclude', type=str, nargs='+', default=[], help="['.git', '.idea', '.vscode']")
 
     is_interactive = not hasattr(sys.modules['__main__'], '__file__')
     args = parser.parse_args()
@@ -40,30 +41,35 @@ def main():
         logger.info("This command is intended to use at setup time, when there is no git repository on the local server, \n {}", pull_command)
         
     elif args.mode == 'push':
-        
-            
-            if args.delete:
-                cmd = f"git ls-files > /tmp/gitls && rsync -avP --delay-updates  --include-from /tmp/gitls --filter=':- .gitignore' --exclude '.git'  {local_dir}/ {remote_server_name}:{remote_dir}/"
-                cmd += ' --delete'
-                logger.warning('Push code to remote server with deleted commands, ')
-                os.system(cmd+' --dry-run | grep delet')
-                if input("Enter y to delete: ") == 'y':
-                    os.system(cmd)
 
+        exclude = ''
+        for ex in args.exclude:
+            exclude += f' --exclude={ex}'
+
+        if args.delete:
+            cmd = f"git ls-files > /tmp/gitls && rsync -avP --delay-updates  --include-from /tmp/gitls --filter=':- .gitignore' {exclude}  {local_dir}/ {remote_server_name}:{remote_dir}/"
+            cmd += ' --delete'
+            logger.warning('Push code to remote server with deleted commands, ')
+            os.system(cmd+' --dry-run | grep delet')
+            if input("Enter y to delete: ") == 'y':
+                os.system(cmd)
+
+        else:
+            cmd = f"cd {local_dir} && git ls-files > /tmp/gitls && rsync -avP --delay-updates  --include-from /tmp/gitls --filter=':- .gitignore' {exclude}  {local_dir}/ {remote_server_name}:{remote_dir}/"
+            if args.loop:
+                while True:
+                    if is_folder_changed(local_dir):
+                        logger.info('File changed, push code to remote server, this action may create trash on remote server, use git status to track new files')
+                        os.system(cmd)
             else:
-                cmd = f"git ls-files > /tmp/gitls && rsync -avP --delay-updates  --include-from /tmp/gitls --filter=':- .gitignore' --exclude '.git'  {local_dir}/ {remote_server_name}:{remote_dir}/"
-                # Use fswatch to check if there is any change in the local directory
-                # if there is any change, then push the code to remote server
+                os.system(cmd)
+                runtime = time.time() - t_start
 
-                if args.loop:
-                    while True:
-                        if is_folder_changed(local_dir):
-                            logger.info('File changed, push code to remote server, this action may create trash on remote server, use git status to track new files')
-                            os.system(cmd)
-                            # time.sleep(1)
-                else:
-                    os.system(cmd)
-                logger.info('Push code to remote server, this action may create trash on remote server, use git status to track new files')
+                logger.info(f'[{runtime:0.2f} s] Push code to remote server {remote_server_name}\n'
+                f'{cmd=}'
+                # f'Local dir: {local_dir}\n'
+                # f'Remote server: {remote_dir}\n'
+                )
 
     elif args.mode == 'git':
         cmd = f'rsync -avP {local_dir}/.git/ {remote_server_name}:{remote_dir}/.git/'
