@@ -7,6 +7,7 @@ setup(
     entry_points={
         'console_scripts': [
             'vastai_utils.save_cost=vastai_utils.safe_cost:main',
+            'vastai_utils.get_ssh_config=vastai_utils.vasai_get_ssh_config:main'
         ],
     },
 )
