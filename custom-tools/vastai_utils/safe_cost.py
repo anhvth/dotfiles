@@ -80,7 +80,7 @@ def check_gpu_utilization(command="vastai show instances", low_threshold=10, che
         time.sleep(check_interval)
 
 # Example usage:
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Check GPU utilization and visualize it over time.")
     parser.add_argument("--command", type=str, default="vastai show instances", help="Command to check GPU utilization.")
     parser.add_argument("--low_threshold", type=float, default=10, help="Threshold for low GPU utilization.")
@@ -92,3 +92,6 @@ if __name__ == "__main__":
 
     check_gpu_utilization(args.command, args.low_threshold, args.check_interval, args.warning_duration, args.visualize)
 
+
+if __name__ == "__main__":
+    main()
