@@ -37,10 +37,10 @@ echo "2. We'll help you install them if you don't"
 echo "3. We're going to check to see if your default shell is zsh"
 echo "4. We'll try to change it if it's not" 
 
-check_for_software curl
-check_for_software zsh
-check_for_software neovim
-check_for_software tmux
+# check_for_software curl
+# check_for_software zsh
+# check_for_software neovim
+# check_for_software tmux
 # check_default_shell
 
 printf "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc

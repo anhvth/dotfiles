@@ -1,4 +1,5 @@
 import re
+import os
 import fire
 
 def parse_to_config(ssh_cmd, host_name='vastai'):
@@ -18,9 +19,16 @@ LocalForward {local_port} {local_hostname}:{local_hostport}
         return config
     else:
         raise ValueError("Invalid SSH command")
+    return config
+
+import pyperclip
 
 def main(ssh_cmd, host_name='vastai'):
-    print(parse_to_config(ssh_cmd, host_name))
+    s = parse_to_config(ssh_cmd, host_name)
+    print(s)
+    pyperclip.copy(s)
+    os.system("vi ~/.ssh/config")
+
 
 if __name__ == '__main__':
     fire.Fire(main)
