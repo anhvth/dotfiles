@@ -1,5 +1,5 @@
-alias fv="nvim -p \$(fzf)"
-alias vi="nvim -p "
+alias fv="vim -p \$(fzf)"
+alias vi="vim -p "
 alias fzc="fzf | xargs -r code"
 alias cd="cd"
 alias dki="docker images"
@@ -217,9 +217,8 @@ kill-all-python-jupyter(){
 
 # AG The Silver Searcher
 
-alias neovim=nvim
-alias vi=nvim
-alias v=nvim
+alias vi=vim
+alias v=vim
 
 
 use-ssh(){
@@ -299,4 +298,25 @@ catssh(){
     MACHINE=$2
     TARGET_FILE=$3
     cat $FILE | ssh $MACHINE "cat > $TARGET_FILE"
+}
+
+
+vif() {
+    local dir=$1
+    local file
+    if [ -z "$dir" ]; then
+        echo "Usage: vif PATH_TO_DIR"
+        return 1
+    fi
+    if [ ! -d "$dir" ]; then
+        echo "Error: Directory $dir does not exist."
+        return 1
+    fi
+
+    file=$(ls $1 | fzf)
+    echo $file
+    if [ -n "$file" ]; then
+        file=$(pwd)"/"$1"/"$file
+        vim $file
+    fi
 }

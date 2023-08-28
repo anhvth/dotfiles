@@ -43,12 +43,13 @@ echo "4. We'll try to change it if it's not"
 # check_for_software tmux
 # check_default_shell
 
-printf "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
-if [ -d "~/.config/nvim/" ]; then
-	rm -r ~/.config/nvim/
-fi
-mkdir -p ~/.config/nvim/
-printf "so $HOME/dotfiles/vim/nvimrc.vim" > ~/.config/nvim/init.vim
+# printf "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
+# if [ -d "~/.config/nvim/" ]; then
+# 	rm -r ~/.config/nvim/
+# fi
+# mkdir -p ~/.config/nvim/
+# printf "so $HOME/dotfiles/vim/nvimrc.vim" > ~/.config/nvim/init.vim
+printf "so $HOME/dotfiles/vim/nvimrc.vim" > ~/.vimrc
 printf "source-file $HOME/dotfiles/tmux/tmux.conf" > ~/.tmux.conf
 
 curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \
