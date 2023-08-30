@@ -104,7 +104,9 @@
 	"Swap line
 	"Insert blank below and above
 
+"-----------nvim plugin # experimental
 " Specify a directory for plugins
+" - For Neovim: ~/.local/share/nvim/plugged
 " - Avoid using standard Vim directory names like 'plugin'
 "
 " find files and populate the quickfix list
