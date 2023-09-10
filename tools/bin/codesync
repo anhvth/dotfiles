@@ -1,0 +1,67 @@
+CONFIG_FILE=".cache/sync_app_info.txt"
+
+setup() {
+    echo -n "Enter local directory (e.g., \$(pwd)): "
+    read input_dir
+    CURDIR=$(realpath $input_dir"/")
+    
+    echo -n "Enter remote user and host (e.g., user@hostname): "
+    read REMOTE_USER_HOST
+    
+    echo -n "Enter remote directory (e.g., /workdir/gitprojects/ColBERT): "
+    read input_dir
+    REMOTE_DIR=$input_dir
+    
+    mkdir -p "$(dirname $CONFIG_FILE)"
+    echo "SYNC_APP_CURDIR=$CURDIR" > $CONFIG_FILE
+    echo "SYNC_APP_REMOTE_USER_HOST=$REMOTE_USER_HOST" >> $CONFIG_FILE
+    echo "SYNC_APP_REMOTE_DIR=$REMOTE_DIR" >> $CONFIG_FILE
+
+    echo "Setup completed and information saved!"
+}
+
+sync_func() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "No setup detected. Run './sync_app.sh setup' first."
+        exit 1
+    fi
+    source $CONFIG_FILE
+    alias rs="rsync -avP --filter=':- .gitignore'"
+
+    echo $CONFIG_FILE
+    RSYNC_ARGS=("$SYNC_APP_CURDIR/" "${SYNC_APP_REMOTE_USER_HOST}:${SYNC_APP_REMOTE_DIR}/")
+
+    # Check if delete flag is provided
+    if [[ $1 == "--delete" ]]; then
+        # Dry run to list files to be deleted
+        echo "Files to be deleted:"
+        rsync -avP --filter=':- .gitignore' ${RSYNC_ARGS[@]} --dry-run --delete
+        echo -n "Do you want to continue with delete? (y/n): "
+        read confirm
+        if [[ $confirm == "y" || $confirm == "Y" ]]; then
+            RSYNC_ARGS+=("--delete")
+        else
+            echo "Abort!"
+            exit 1
+        fi
+    fi
+
+    cmd="rs ${RSYNC_ARGS[@]}"
+    echo $cmd
+    eval $cmd
+    
+}
+
+case $1 in
+    "setup")
+        setup
+        ;;
+    "sync")
+        shift
+        sync_func "$@"
+        ;;
+    *)
+        echo "Usage: ./sync_app.sh [setup|sync [--delete]]"
+        exit 1
+        ;;
+esac
