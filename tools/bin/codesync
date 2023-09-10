@@ -27,16 +27,17 @@ sync_func() {
     fi
     source $CONFIG_FILE
     alias rs="rsync -avP --filter=':- .gitignore'"
-
-    echo $CONFIG_FILE
-    RSYNC_ARGS=("$SYNC_APP_CURDIR/" "${SYNC_APP_REMOTE_USER_HOST}:${SYNC_APP_REMOTE_DIR}/")
-
+    if [[ $1 == "-r" ]]; then
+        RSYNC_ARGS=("${SYNC_APP_REMOTE_USER_HOST}:${SYNC_APP_REMOTE_DIR}/" "$SYNC_APP_CURDIR/")
+    else
+        RSYNC_ARGS=("$SYNC_APP_CURDIR/" "${SYNC_APP_REMOTE_USER_HOST}:${SYNC_APP_REMOTE_DIR}/")
+    fi
     # Check if delete flag is provided
     if [[ $1 == "--delete" ]]; then
         # Dry run to list files to be deleted
         echo "Files to be deleted:"
         rsync -avP --filter=':- .gitignore' ${RSYNC_ARGS[@]} --dry-run --delete
-        echo -n "Do you want to continue with delete? (y/n): "
+        echo "\nDo you want to continue with delete? (y/n): "
         read confirm
         if [[ $confirm == "y" || $confirm == "Y" ]]; then
             RSYNC_ARGS+=("--delete")
@@ -47,9 +48,15 @@ sync_func() {
     fi
 
     cmd="rs ${RSYNC_ARGS[@]}"
-    echo $cmd
     eval $cmd
-    
+    echo $cmd
+}
+sync_loop() {
+    # Monitor changes in SYNC_APP_CURDIR with fswatch and run sync_func upon change
+    echo "Watching changes in $SYNC_APP_CURDIR. Press [CTRL+C] to stop."
+    fswatch -o "$SYNC_APP_CURDIR" | while read -r event; do
+        sync_func
+    done
 }
 
 case $1 in
@@ -59,6 +66,15 @@ case $1 in
     "sync")
         shift
         sync_func "$@"
+        ;;
+    "ssh")
+        echo "Enter remote"
+        source $CONFIG_FILE
+        ssh $SYNC_APP_REMOTE_USER_HOST -t "cd $SYNC_APP_REMOTE_DIR && zsh" 
+        ;;
+    "sync-loop")
+        source $CONFIG_FILE
+        sync_loop
         ;;
     *)
         echo "Usage: ./sync_app.sh [setup|sync [--delete]]"
