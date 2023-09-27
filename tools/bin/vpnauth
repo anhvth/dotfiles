@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start the SSH tunnel
-ssh m2 -N -L 9222:localhost:9222 &
+ssh m2 -N -L 9223:localhost:9223 &
 
 # Store the SSH process ID
 SSH_PID=$!

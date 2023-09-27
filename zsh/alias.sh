@@ -16,6 +16,7 @@ alias rs="rsync -avzhe ssh --progress "
 alias rs-git="rs --filter=':- .gitignore' "
 alias nb-clean="jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace"
 alias gpus="watch -n0.1 nvidia-smi"
+alias autossh="autossh -M 20000 -o ServerAliveInterval=5 -f -N"
 rs-git-sync(){
     x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2 --delete"
     watch $x
@@ -300,3 +301,6 @@ catssh(){
     TARGET_FILE=$3
     cat $FILE | ssh $MACHINE "cat > $TARGET_FILE"
 }
+
+
+alias code-debug=$HOME"/dotfiles/bin/code-debug"

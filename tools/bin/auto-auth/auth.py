@@ -6,8 +6,8 @@ import pyperclip
 from glob import glob
 
 options = webdriver.ChromeOptions()
-os.makedirs('../drivers/user_data', exist_ok=True)
-options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+# os.makedirs('../drivers/user_data', exist_ok=True)
+options.add_experimental_option("debuggerAddress", "127.0.0.1:9223")
 driver = webdriver.Chrome(options=options)
 web = driver.get('chrome-extension://bhghoamapcdpbohphigoooaddinpkbai/view/popup.html')
 from selenium.webdriver.common.by import By
