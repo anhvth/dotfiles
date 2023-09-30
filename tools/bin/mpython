@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+import argparse
+import multiprocessing  # Import multiprocessing module
+import os
+import shlex  # To properly escape command line arguments
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Process fold arguments')
+    parser.add_argument('--total_fold', '-t', default=16, type=int, help='total number of folds')
+    parser.add_argument('--gpus', type=str, default="0,1,2,3,4,5,6,7")
+    parser.add_argument('--ignore_gpus', '-ig', type=str, default="")
+    parser.add_argument('--total_cpu', type=int, default=multiprocessing.cpu_count(), help='total number of cpu cores available')
+    parser.add_argument('cmd', nargs=argparse.REMAINDER)  # This will gather the remaining unparsed arguments
+    
+    args = parser.parse_args()
+
+    if not args.cmd or (args.cmd[0] == '--' and len(args.cmd) == 1):
+        parser.error("Invalid command provided")
+
+    cmd_str = None
+    if args.cmd[0] == '--':
+        cmd_str = ' '.join(shlex.quote(arg) for arg in args.cmd[1:])
+    else:
+        cmd_str = ' '.join(shlex.quote(arg) for arg in args.cmd)
+    
+    gpus = args.gpus.split(',')
+    gpus = [gpu for gpu in gpus if not gpu in args.ignore_gpus.split(',')]
+    num_gpus = len(gpus)
+
+    cpu_per_process = max(args.total_cpu // args.total_fold, 1)
+    f = open('/tmp/cmd.sh', 'w')
+    for i in range(args.total_fold):
+        gpu = gpus[i % num_gpus]
+        cpu_start = (i * cpu_per_process) % args.total_cpu
+        cpu_end = ((i + 1) * cpu_per_process - 1) % args.total_cpu
+
+        fold_cmd = f"CUDA_VISIBLE_DEVICES={gpu} taskset -c {cpu_start}-{cpu_end} python {cmd_str} --fold {i} {args.total_fold}"
+
+        if i < args.total_fold - 1:
+            fold_cmd = fold_cmd + ' |\\\n'
+        else:
+            fold_cmd = fold_cmd + '\n'
+
+        print(fold_cmd, end='')
+        f.write(fold_cmd)
+    f.close()
+    # print('To run all:\nsh /tmp/cmd.sh')
+    if input('Would you like to execute (y/n): ').lower() == 'y':
+        # os.system('sh /tmp/cmd.sh')
+        import subprocess
+        subprocess.run(['sh', '/tmp/cmd.sh'])
+
+
+if __name__ == "__main__":
+    main()
