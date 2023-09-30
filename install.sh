@@ -43,6 +43,10 @@ echo "4. We'll try to change it if it's not"
 # check_for_software tmux
 # check_default_shell
 
+# Install neovim from bin 
+cd /home/ubuntu/dotfiles/bin && ./nvim.appimage --appimage-extract && sudo mv squashfs-root / && sudo ln -s /squashfs-root/AppRun /usr/bin/nvim cd ~/dotfiles
+
+
 printf "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
 if [ -d "~/.config/nvim/" ]; then
 	rm -r ~/.config/nvim/

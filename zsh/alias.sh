@@ -1,5 +1,4 @@
-alias fv="nvim -p \$(fzf)"
-alias vi="nvim -p "
+alias vi=nvim
 alias fzc="fzf | xargs -r code"
 alias cd="cd"
 alias dki="docker images"
@@ -218,9 +217,6 @@ kill-all-python-jupyter(){
 
 # AG The Silver Searcher
 
-alias neovim=nvim
-alias vi=nvim
-alias v=nvim
 
 
 use-ssh(){
