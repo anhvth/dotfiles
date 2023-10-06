@@ -12,6 +12,7 @@ git clone https://github.com/anhvth/avcv.git ~/avcv && pip install -e ~/avcv
  echo "source ~/.alias.h">> ~/.bashrc && \
  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
  ~/.fzf/install
+wget https://github.com/anhvth/dotfiles/blob/main/bash/bashrc.sh -O /tmp/bashrc && cat /tmp/bashrc ~/.bashrc
 ```
 tmux
 ```bash
