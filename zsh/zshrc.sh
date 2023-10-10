@@ -59,3 +59,4 @@ fi
 export PATH=$PATH:$HOME/dotfiles/squashfs-root/usr/bin/
 export PATH=$PATH:$HOME/dotfiles/tools/bin/
 
+source /home/.zshrc.local
