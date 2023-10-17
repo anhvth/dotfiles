@@ -207,12 +207,11 @@ rs-current-dir(){
 }
 
 kill-all-python-except-jupyter(){
-    ps aux | grep -i python| grep -wv jupyter | grep $USER|awk '{print $2}' | xargs -r kill -9
-    #  ps aux | grep -i python |awk '{print $2}' | xargs -r kill -9
+    ps aux | grep -i python| grep -wv jupyter| grep -wv vscode | grep $USER|awk '{print $2}' | xargs -r kill -9
 }
 
 kill-all-python-jupyter(){
-     ps aux | grep -i python |awk '{print $2}' | xargs -r kill -9
+     ps aux | grep -i python |grep -wv vscode |awk '{print $2}'| xargs -r kill -9
 }
 
 # AG The Silver Searcher

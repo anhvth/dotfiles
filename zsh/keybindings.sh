@@ -72,12 +72,12 @@
 	}
 	zle -N ctrl_n
 	bindkey "^n" ctrl_n
-# Enter
-	function enter_line() {
-		zle accept-line
-	}
-	zle -N enter_line
-	bindkey "^o" enter_line
+# # Enter
+# 	function enter_line() {
+# 		zle accept-line
+# 	}
+# 	zle -N enter_line
+# 	bindkey "^o" enter_line
 
 # Sudo
 	function add_sudo() {
@@ -86,6 +86,14 @@
 	}
 	zle -N add_sudo
 	bindkey "^s" add_sudo
+
+# code_debug
+	function add_code_debug() {
+		BUFFER="code-debug \""$BUFFER"\""
+		zle end-of-line
+	}
+	zle -N add_code_debug
+	bindkey "^o" add_code_debug
 
 	function rs_push() {
         filename=$(ls | fzf)

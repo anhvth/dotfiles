@@ -5,7 +5,7 @@ import json5
 import json
 import os
 
-def parse_to_debug_json(command_str):
+def parse_to_debug_json(command_str, justMyCode):
     tokens = command_str.split()
     program = tokens[1]
     result = {
@@ -14,7 +14,7 @@ def parse_to_debug_json(command_str):
         "request": "launch",
         "program": program,
         "console": "integratedTerminal",
-        "justMyCode": False,
+        "justMyCode": justMyCode,
         "cwd": "${workspaceFolder}",
         "env": {"PYTHONPATH": "${workspaceFolder}"},
         "args": tokens[2:]
@@ -30,20 +30,35 @@ def append_to_launch_file(configuration, launch_file_path=".vscode/launch.json")
     if not os.path.exists(launch_file_path):
         with open(launch_file_path, 'w') as f:
             json.dump({"version": "0.2.0", "configurations": []}, f, indent=4)
+    
     with open(launch_file_path, 'r') as f:
         data = json5.load(f)
 
-    data["configurations"].append(configuration)
-
+    # Find if configuration for the program already exists
+    existing_config = None
+    for config in data["configurations"]:
+        if config["name"] == configuration["name"]:
+            existing_config = config
+            break
+    
+    # If it exists, update it. If not, append it
+    if existing_config is not None:
+        existing_config.update(configuration)
+    else:
+        data["configurations"].append(configuration)
+    
+    # Save back to file
     with open(launch_file_path, 'w') as f:
         json.dump(data, f, indent=4)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate debug configuration for VS Code")
     parser.add_argument('command', help="The command to convert into a debug configuration.")
+    parser.add_argument('--allcode', '-a', default=True, action='store_false')
     args = parser.parse_args()
 
-    configuration = parse_to_debug_json(args.command)
+    configuration = parse_to_debug_json(args.command, args.allcode)
     append_to_launch_file(configuration)
 
 if __name__ == "__main__":
