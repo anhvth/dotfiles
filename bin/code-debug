@@ -16,7 +16,7 @@ def parse_to_debug_json(command_str, justMyCode):
         "console": "integratedTerminal",
         "justMyCode": justMyCode,
         "cwd": "${workspaceFolder}",
-        "env": {"PYTHONPATH": "${workspaceFolder}"},
+        "env": {"PYTHONPATH": "${workspaceFolder}", "DEBUG": 1},
         "args": tokens[2:]
     }
     return result
