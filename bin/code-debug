@@ -5,18 +5,18 @@ import json5
 import json
 import os
 
-def parse_to_debug_json(command_str, justMyCode):
+def parse_to_debug_json(command_str, justMyCode, name):
     tokens = command_str.split()
     program = tokens[1]
     result = {
-        "name": f"Python: {program}",
+        "name": f"Python: {program}" if name is None else name,
         "type": "python",
         "request": "launch",
         "program": program,
         "console": "integratedTerminal",
         "justMyCode": justMyCode,
         "cwd": "${workspaceFolder}",
-        "env": {"PYTHONPATH": "${workspaceFolder}", "DEBUG": 1},
+        "env": {"PYTHONPATH": "${workspaceFolder}", "DEBUG": '1'},
         "args": tokens[2:]
     }
     return result
@@ -56,9 +56,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generate debug configuration for VS Code")
     parser.add_argument('command', help="The command to convert into a debug configuration.")
     parser.add_argument('--allcode', '-a', default=True, action='store_false')
+    parser.add_argument('--name', default=None)
     args = parser.parse_args()
 
-    configuration = parse_to_debug_json(args.command, args.allcode)
+    configuration = parse_to_debug_json(args.command, args.allcode, args.name)
     append_to_launch_file(configuration)
 
 if __name__ == "__main__":

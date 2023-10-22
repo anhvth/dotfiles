@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 import argparse
 import multiprocessing
 import os
-import os.path as osp
 import shlex
 import subprocess
 import pandas as pd 
@@ -13,14 +11,14 @@ def main():
     parser.add_argument('--gpus', type=str, default="0,1,2,3,4,5,6,7")
     parser.add_argument('--ignore_gpus', '-ig', type=str, default="")
     parser.add_argument('--total_cpu', type=int, default=multiprocessing.cpu_count(), help='total number of cpu cores available')
-    parser.add_argument('-i', required=True)
-    parser.add_argument('-o', required=True)
+    parser.add_argument('--input_file', required=True)
+    parser.add_argument('--output_file', required=True)
     parser.add_argument('cmd', nargs=argparse.REMAINDER)  # This will gather the remaining unparsed arguments
     
     args = parser.parse_args()
 
     # Split the input CSV file into chunks
-    df = pd.read_csv(args.i, sep='\t')  # Assuming tab-separated values
+    df = pd.read_csv(args.input_file, sep='\t')  # Assuming tab-separated values
     chunk_size = len(df) // args.total_fold
 
     # Build the command string and save to a temporary shell script
@@ -30,17 +28,15 @@ def main():
     cpu_per_process = max(args.total_cpu // args.total_fold, 1)
     f = open('/tmp/cmd.sh', 'w')
     csv_out_chunks = [f'/tmp/output_chunk_{i}.tsv' for i in range(args.total_fold)]
-    # start = 0  # Initialize the start variable
+    start = 0  # Initialize the start variable
     for i in range(args.total_fold):
         gpu = gpus[i % num_gpus]
         cpu_start = (i * cpu_per_process) % args.total_cpu
         cpu_end = ((i + 1) * cpu_per_process - 1) % args.total_cpu
         input_chunk = f'/tmp/input_chunk_{i}.tsv'
-        df_chunk = df[i::args.total_fold]
-        df_chunk.to_csv(input_chunk, sep='\t', index=False) 
-        input_chunk = osp.abspath(input_chunk)
-        out = osp.abspath(csv_out_chunks[i])
-        fold_cmd = f"CUDA_VISIBLE_DEVICES={gpu} taskset -c {cpu_start}-{cpu_end} python {args.cmd[0]} -i {input_chunk} -o {out}"
+        print(f'Tmpfile: {input_chunk=}')
+        df[start:start+chunk_size].to_csv(input_chunk, sep='\t', index=False)  # Write chunk to file here
+        fold_cmd = f"CUDA_VISIBLE_DEVICES={gpu} taskset -c {cpu_start}-{cpu_end} python {args.cmd[0]} --fold_num {i} --input_file {input_chunk} --output_file {csv_out_chunks[i]}"
         fold_cmd = fold_cmd + ' |\\\n' if i < args.total_fold - 1 else fold_cmd + '\n'
         print(fold_cmd, end='')
         f.write(fold_cmd)
@@ -51,8 +47,8 @@ def main():
         subprocess.run(['sh', '/tmp/cmd.sh'])
 
     # Fuse the output chunks into a single output file
-    df_out = pd.concat([pd.read_csv(out_chunk, sep='\t', header=None) for out_chunk in csv_out_chunks], ignore_index=True)
-    df_out.to_csv(args.o, sep='\t', index=False)
+    df_out = pd.concat([pd.read_csv(out_chunk, sep='\t') for out_chunk in csv_out_chunks], ignore_index=True)
+    df_out.to_csv(args.output_file, sep='\t', index=False)
 
 if __name__ == "__main__":
     main()
