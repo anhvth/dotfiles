@@ -32,14 +32,13 @@ def main():
     f = open('/tmp/cmd.sh', 'w')
     csv_out_chunks = [f'/tmp/output_chunk_{i}.tsv' for i in range(args.total_fold)]
     tbdelete = []
-    start = 0  # Initialize the start variable
     for i in range(args.total_fold):
         gpu = gpus[i % num_gpus]
         cpu_start = (i * cpu_per_process) % args.total_cpu
         cpu_end = ((i + 1) * cpu_per_process - 1) % args.total_cpu
         input_chunk = f'/tmp/input_chunk_{i}.tsv'
         print(f'Tmpfile: {input_chunk=}')
-        df[start:start+chunk_size].to_csv(input_chunk, sep='\t', index=False)  # Write chunk to file here
+        df[i::args.total_fold].to_csv(input_chunk, sep='\t', index=False)  # Write chunk to file here
         tbdelete.extend([input_chunk, csv_out_chunks[i]])
         fold_cmd = f"CUDA_VISIBLE_DEVICES={gpu} taskset -c {cpu_start}-{cpu_end} python {args.cmd[0]} -i {input_chunk} -o {csv_out_chunks[i]}"
         fold_cmd = fold_cmd + ' |\\\n' if i < args.total_fold - 1 else fold_cmd + '\n'
@@ -49,12 +48,14 @@ def main():
 
     try:
         subprocess.run(['sh', '/tmp/cmd.sh'])
-        df_out = pd.concat([pd.read_csv(out_chunk, sep='\t') for out_chunk in csv_out_chunks], ignore_index=True)
+        df_out = pd.concat([pd.read_csv(out_chunk, sep='\t', header=None) for out_chunk in csv_out_chunks], ignore_index=True)
+        os.makedirs(os.path.dirname(args.o), exist_ok=True)
         df_out.to_csv(args.o, sep='\t', index=False)
     finally:
-        for file in tbdelete:
-            if os.path.exists(file):
-                os.remove(file)
+        pass
+        # for file in tbdelete:
+        #     if os.path.exists(file):
+        #         os.remove(file)
                 
 
 if __name__ == "__main__":
