@@ -61,6 +61,8 @@ def main():
 
     configuration = parse_to_debug_json(args.command, args.allcode, args.name)
     append_to_launch_file(configuration)
+    configuration = parse_to_debug_json(args.command, args.allcode, 'latest')
+    append_to_launch_file(configuration)
 
 if __name__ == "__main__":
     main()

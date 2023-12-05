@@ -5,58 +5,90 @@ import multiprocessing
 import os
 import shlex
 import subprocess
-import pandas as pd 
+import pandas as pd
+import itertools
+import re
+import sys
+import glob
 
-def main():
-    parser = argparse.ArgumentParser(description='Process fold arguments')
-    parser.add_argument('--total_fold', '-t', default=16, type=int, help='total number of folds')
-    parser.add_argument('--gpus', type=str, default="0,1,2,3,4,5,6,7")
-    parser.add_argument('--ignore_gpus', '-ig', type=str, default="")
-    parser.add_argument('--total_cpu', type=int, default=multiprocessing.cpu_count(), help='total number of cpu cores available')
-    parser.add_argument('-i', required=True)
-    parser.add_argument('-o', required=True)
-    parser.add_argument('cmd', nargs=argparse.REMAINDER)  # This will gather the remaining unparsed arguments
-    
-    args = parser.parse_args()
+def extract_output_file(command):
+    match = re.search(r'(-o|--output) (\S+)', command)
+    if match:
+        return match.group(2)
+    return None
+
+def get_cmd_to_run(commands):
+    return [cmd for cmd in commands if not os.path.exists(extract_output_file(cmd))]
+
+def run_in_tmux(commands_to_run, tmux_name, num_windows):
+    subprocess.run(['tmux', 'new-session', '-d', '-s', tmux_name])
+    for i, cmd in enumerate(itertools.cycle(commands_to_run)):
+        if i >= num_windows:
+            break
+        window_name = f"{tmux_name}:{i}"
+        if i > 0:
+            subprocess.run(['tmux', 'new-window', '-t', tmux_name])
+        subprocess.run(['tmux', 'send-keys', '-t', window_name, cmd, 'C-m'])
+
+def concatenate_and_save(output_dir, output_file):
+    output_files = list(sorted(glob.glob(f"{output_dir}/output_chunk_*.tsv")))
+    dfs = [pd.read_csv(file, sep='\t', header=None) for file in output_files]
+    df = pd.concat(dfs, ignore_index=True)
+    df.to_csv(output_file, sep='\t', header=None, index=None)
+    for path in output_files:
+        print('rm', path)
+        os.remove(path)
+
+def create_commands(args):
     args.i = os.path.abspath(args.i)
     args.o = os.path.abspath(args.o)
-    # Split the input CSV file into chunks
-    df = pd.read_csv(args.i, sep='\t')  # Assuming tab-separated values
-    chunk_size = len(df) // args.total_fold
+    df = pd.read_csv(args.i, sep='\t')
 
-    # Build the command string and save to a temporary shell script
     gpus = args.gpus.split(',')
-    gpus = [gpu for gpu in gpus if not gpu in args.ignore_gpus.split(',')]
+    gpus = [gpu for gpu in gpus if gpu not in args.ignore_gpus.split(',')]
     num_gpus = len(gpus)
     cpu_per_process = max(args.total_cpu // args.total_fold, 1)
-    f = open('/tmp/cmd.sh', 'w')
-    csv_out_chunks = [f'/tmp/output_chunk_{i}.tsv' for i in range(args.total_fold)]
+    f = open(args.tmp_script, 'w')
+    csv_out_chunks = [f'{args.output_dir}/output_chunk_{i}.tsv' for i in range(args.total_fold)]
     tbdelete = []
+    cmds = []
     for i in range(args.total_fold):
         gpu = gpus[i % num_gpus]
         cpu_start = (i * cpu_per_process) % args.total_cpu
         cpu_end = ((i + 1) * cpu_per_process - 1) % args.total_cpu
-        input_chunk = f'/tmp/input_chunk_{i}.tsv'
-        print(f'Tmpfile: {input_chunk=}')
-        df[i::args.total_fold].to_csv(input_chunk, sep='\t', index=False)  # Write chunk to file here
+        input_chunk = f'{args.input_dir}/input_chunk_{i}.tsv'
+        df[i::args.total_fold].to_csv(input_chunk, sep='\t', index=False)
         tbdelete.extend([input_chunk, csv_out_chunks[i]])
         fold_cmd = f"CUDA_VISIBLE_DEVICES={gpu} taskset -c {cpu_start}-{cpu_end} python {args.cmd[0]} -i {input_chunk} -o {csv_out_chunks[i]}"
-        fold_cmd = fold_cmd + ' |\\\n' if i < args.total_fold - 1 else fold_cmd + '\n'
-        print(fold_cmd, end='')
-        f.write(fold_cmd)
-    f.close()
-
-    try:
-        subprocess.run(['sh', '/tmp/cmd.sh'])
-        df_out = pd.concat([pd.read_csv(out_chunk, sep='\t', header=None) for out_chunk in csv_out_chunks], ignore_index=True)
-        os.makedirs(os.path.dirname(args.o), exist_ok=True)
-        df_out.to_csv(args.o, sep='\t', index=False)
-    finally:
-        pass
-        # for file in tbdelete:
-        #     if os.path.exists(file):
-        #         os.remove(file)
-                
+        cmds.append(fold_cmd)
+        # fold_cmd = fold_cmd + '\n' if i < args.total_fold - 1 else fold_cmd + '\n'
+        # f.write(fold_cmd)
+    return cmds
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Process fold arguments')
+    parser.add_argument('--total_fold', '-t', default=16, type=int, help='Total number of folds')
+    parser.add_argument('--gpus', default="0,1,2,3,4,5,6,7", help='GPU IDs to use')
+    parser.add_argument('--ignore_gpus', '-ig', default="", help='GPUs to ignore')
+    parser.add_argument('--total_cpu', default=multiprocessing.cpu_count(), type=int, help='Total number of CPU cores')
+    parser.add_argument('--input_dir', default="/tmp", help='Directory for input chunks')
+    parser.add_argument('--output_dir', default="/tmp", help='Directory for output chunks')
+    parser.add_argument('--tmp_script', default="/tmp/cmd.sh", help='Path for temporary shell script')
+    parser.add_argument('-i', required=True, help='Input file')
+    parser.add_argument('-o', required=True, help='Output file')
+    parser.add_argument('cmd', nargs=argparse.REMAINDER, help='Command to run')
+    
+    args = parser.parse_args()
+    commands = create_commands(args)
+    commands_to_run = get_cmd_to_run(commands)
+    run_in_tmux(commands_to_run, 'run', args.total_fold)
+    
+    import time
+    while len(commands_to_run):
+        commands_to_run = get_cmd_to_run(commands)
+        time.sleep(5)
+        print('Waiting for all intermediate outputs to become available')
+        
+    if not commands_to_run:
+        print("No commands to run. All output files exist.")
+        concatenate_and_save(args.output_dir, args.o)
