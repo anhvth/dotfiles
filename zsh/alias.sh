@@ -1,4 +1,3 @@
-alias vi=nvim
 alias fzc="fzf | xargs -r code"
 alias cd="cd"
 alias dki="docker images"
