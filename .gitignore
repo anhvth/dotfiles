@@ -1,3 +1,18 @@
-.hypothesis/
+**/core
+**/*.pyc
+**/Cached*
+# code-server/config/globalStorage/state.json
+code-server/config/rapid_render.json
+# code-server/config/User/*
+code-server/code-server
+# code-server*
+code-server/config/User/state/
+code-server/config/User/workspaceStorage/
+# code-server/config/extensions/.obsolete
+code-server/config/logs/
+**/*.dll
+code-server/config/extensions
+.DS_Store
 ripgrep_11.0.2_amd64.deb
+.vscode
 tools/bin/nvim

@@ -83,3 +83,5 @@ chsh -s /bin/zsh
 git config --global user.email "anhvth.226@gmail.com"
 git config --global user.name "anh vo"   
 git config --global core.editor "vim"
+
+cp tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
