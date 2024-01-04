@@ -14,14 +14,15 @@ def run_in_tmux(commands_to_run, tmux_name, num_windows):
     with open('/tmp/start_multirun_tmux.sh', 'w') as script_file:
         script_file.write('#!/bin/bash\n\n')
         script_file.write(f'tmux new-session -d -s {tmux_name}\n')
-        # window_name = f"{tmux_name}:0"
-        # script_file.write(f'tmux new-window -t {tmux_name}\n')
         for i, cmd in enumerate(itertools.cycle(commands_to_run)):
             if i >= num_windows:
                 break
-            window_name = f"{tmux_name}:{i+1}"
-            script_file.write(f'tmux new-window -t {tmux_name}\n')
-            script_file.write(f'tmux send-keys -t {window_name} \'{cmd}\' C-m\n')
+            window_name = f"{tmux_name}:{i}"
+            if i == 0:
+                script_file.write(f'tmux send-keys -t {window_name} \'{cmd}\' C-m\n')
+            else:
+                script_file.write(f'tmux new-window -t {tmux_name}\n')
+                script_file.write(f'tmux send-keys -t {window_name} \'{cmd}\' C-m\n')
 
         # Make the script executable
         script_file.write('chmod +x /tmp/start_multirun_tmux.sh\n')
