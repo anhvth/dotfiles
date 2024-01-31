@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Check if the correct number of arguments are provided
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 A:LocalNetworkIP:LocalPort B:RemotePort"
+    exit 1
+fi
+
+# Parse the arguments
+IFS=':' read -ra ADDR_A <<< "$1"
+IFS=':' read -ra ADDR_B <<< "$2"
+
+if [ "${#ADDR_A[@]}" -ne 3 ] || [ "${#ADDR_B[@]}" -ne 2 ]; then
+    echo "Error: Arguments not in the correct format."
+    exit 1
+fi
+
+localNetworkIP=${ADDR_A[1]}
+localPort=${ADDR_A[2]}
+machineA=${ADDR_A[0]}
+machineB=${ADDR_B[0]}
+remotePort=${ADDR_B[1]}
+
+# Check if ports are numbers
+re='^[0-9]+$'
+if ! [[ $localPort =~ $re ]] || ! [[ $remotePort =~ $re ]]; then
+    echo "Error: Ports must be numbers."
+    exit 1
+fi
+
+# Print the local port forwarding command
+echo "Local Forwarding Command:"
+echo "ssh -f -N -L ${localPort}:${localNetworkIP}:${localPort} ${machineA}"
+
+# Print the reverse port forwarding command
+echo "Reverse Forwarding Command:"
+echo "ssh -f -N -R ${remotePort}:localhost:${localPort} ${machineB}"
+
