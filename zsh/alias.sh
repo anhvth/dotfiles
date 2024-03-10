@@ -299,3 +299,4 @@ catssh(){
 
 
 alias code-debug=$HOME"/dotfiles/bin/code-debug"
+alias autoreload=$HOME"/dotfiles/custom-tools/autoreload-toggle"
