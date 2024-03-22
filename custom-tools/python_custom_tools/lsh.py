@@ -4,6 +4,24 @@ import argparse, os
 
 
 def main():
+    """
+    Executes a list of commands in parallel using tmux.
+
+    This function takes command-line arguments and performs the following steps:
+    1. Parses the command-line arguments using `argparse`.
+    2. Reads the list of commands from a file specified by the `listcmd` argument.
+    3. Divides the available CPU cores among the specified number of workers.
+    4. Assigns a GPU to each worker based on the available GPUs and the worker's ID.
+    5. Generates a list of commands for each worker, with appropriate GPU and CPU assignments.
+    6. Writes the list of commands for each worker to separate files.
+    7. Executes the commands using `tmux` in parallel.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('listcmd')
     parser.add_argument('num_workers', type=int)
