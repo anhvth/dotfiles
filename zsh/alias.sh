@@ -300,3 +300,7 @@ catssh(){
 
 alias code-debug=$HOME"/dotfiles/bin/code-debug"
 alias autoreload=$HOME"/dotfiles/custom-tools/autoreload-toggle"
+cuda-ls () {
+	nvidia-smi --query-gpu=index,gpu_name,memory.free --format=csv,noheader | sort -t ',' -k3 -n -r
+}
+
