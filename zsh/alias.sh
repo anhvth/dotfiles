@@ -304,3 +304,17 @@ cuda-ls () {
 	nvidia-smi --query-gpu=index,gpu_name,memory.free --format=csv,noheader | sort -t ',' -k3 -n -r
 }
 
+
+
+start_cmd_in_tmux() {
+    cmd=no_proxy="localhost,127.0.0.1,::1 "$1
+    echo "Starting command: $cmd"
+    # add sleep to cmd to avoid exit after failure
+    cmd="$cmd; sleep 1234"
+    tmux_name="vllm_$2"
+    if ! tmux has-session -t "$tmux_name" 2>/dev/null; then
+        tmux new-session -d -s "$tmux_name" "$cmd"
+    else
+        echo "Session $tmux_name already exists."
+    fi
+}
