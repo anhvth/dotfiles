@@ -318,3 +318,21 @@ start_cmd_in_tmux() {
         echo "Session $tmux_name already exists."
     fi
 }
+
+# Function to set environment in ~/.zshrc.sh
+set-conda-env() {
+    local file="$HOME/.zshrc"
+    local prefix="atv"
+    local new_line="atv $1"
+
+    if [ -f "$file" ]; then
+        # Delete line starting with "atv"
+        sed -i.bak "/^${prefix}/d" "$file"
+        # Add the new line "atv $1"
+        echo "$new_line" >> "$file"
+        echo "Deleted line starting with 'atv' and added '$new_line' to $file."
+    else
+        echo "File $file does not exist."
+    fi
+}
+
