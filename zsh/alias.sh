@@ -336,3 +336,28 @@ set-conda-env() {
     fi
 }
 
+function forward_ports() {
+  
+  local port=$1
+  
+  if [ -z "$port" ]; then
+    echo "Port number is required."
+    return 1
+  fi
+
+  ssh kube -L ${port}:localhost:${port} &
+  SSH_PID=$!
+  
+  # Give SSH tunnel some time to establish
+  sleep 2
+  
+  kubectl port-forward -n kubeflow-anhvth5 pod/anhvth-0 ${port}:${port} &
+  KUBECTL_PID=$!
+  
+  # Wait for the user to terminate the function
+  trap "kill $SSH_PID $KUBECTL_PID" SIGINT SIGTERM
+  
+  wait $KUBECTL_PID
+  wait $SSH_PID
+}
+
