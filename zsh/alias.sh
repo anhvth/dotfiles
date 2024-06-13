@@ -334,6 +334,7 @@ set-conda-env() {
     else
         echo "File $file does not exist."
     fi
+    atv $1
 }
 
 function forward_ports() {
