@@ -37,7 +37,8 @@ source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlightin
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
 source $HOME/dotfiles/zsh/prompt.sh
-source ~/dotfiles/zsh/alias.sh
+source $HOME/dotfiles/zsh/alias.sh
+source $HOME/dotfiles/zsh/functions.sh
 
 # Fix for arrow-key searching
 # start typing + [Up-Arrow] - fuzzy find history forward
