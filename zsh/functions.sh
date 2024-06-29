@@ -287,3 +287,10 @@ function forward_ports() {
   wait $KUBECTL_PID
   wait $SSH_PID
 }
+
+
+
+kill_debug_processes() {
+  xargs -r kill $(ps aux | grep "$1" | awk '{print $2}')
+}
+
