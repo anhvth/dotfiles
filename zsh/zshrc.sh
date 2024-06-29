@@ -37,8 +37,7 @@ source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlightin
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
 source $HOME/dotfiles/zsh/prompt.sh
-source $HOME/dotfiles/zsh/alias.sh
-source $HOME/dotfiles/zsh/functions.sh
+source ~/dotfiles/zsh/alias.sh
 
 # Fix for arrow-key searching
 # start typing + [Up-Arrow] - fuzzy find history forward
@@ -59,6 +58,7 @@ fi
 
 export PATH=$PATH:$HOME/dotfiles/squashfs-root/usr/bin/
 export PATH=$PATH:$HOME/dotfiles/tools/bin/
+export PATH=$PATH:$HOME/dotfiles/bin/dist
 export PATH=$PATH:$HOME/dotfiles/custom-tools/
 
 
