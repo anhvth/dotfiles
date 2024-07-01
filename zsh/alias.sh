@@ -364,3 +364,41 @@ function forward_ports() {
 
 alias kill_processes="awk '{print $2}' | xargs kill"
 alias code-debug="/Users/anhvth/dotfiles/bin/code-debug"
+
+
+
+# Add this function to your .bashrc, .zshrc, or another appropriate shell configuration file
+
+function fetch_and_open_video() {
+    local video_path="$1"
+    local destination_path="/tmp/video.mp4"
+    local quicktime_bin="/Applications/QuickTime Player.app"
+
+    if [ -z "$video_path" ]; then
+        echo "Usage: fetch_and_open_video <video_path>"
+        return 1
+    fi
+
+    echo "Checking if QuickTime Player is running..."
+    if pgrep -x "QuickTime Player" > /dev/null; then
+        echo "QuickTime Player is running. Closing it first..."
+        osascript -e 'tell application "QuickTime Player" to quit'
+        sleep 0.1  # Give some time for QuickTime Player to quit
+    fi
+
+    echo "Transferring video..."
+    rsync -avzhe ssh --progress "$video_path" "$destination_path"
+
+    if [ $? -ne 0 ]; then
+        echo "Failed to transfer video."
+        return 1
+    fi
+
+    echo "Opening video with QuickTime Player..."
+    open $destination_path
+}
+alias ov=fetch_and_open_video
+
+# Reload your shell configuration or manually source the script to use the function
+# source ~/.bashrc or source ~/.zshrc based on where you added the function
+
