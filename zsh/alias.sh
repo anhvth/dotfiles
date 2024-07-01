@@ -23,8 +23,14 @@ rs-git-sync(){
 
 alias update-dotfiles="cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd"
 absp(){
-    echo $cname":"$(pwd)/$(fzf)
+    file_or_folder=$1
+    # check if file_or_folder is provided
+    if [ -n "$file_or_folder" ]; then
+        echo "$cname:$(pwd)/$file_or_folder"
+    else
+        echo "$cname:$(pwd)/$(fzf)"
 }
+
 c() {
     cd $1;
     ls;
