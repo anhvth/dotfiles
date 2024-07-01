@@ -22,14 +22,30 @@ rs-git-sync(){
 }
 
 alias update-dotfiles="cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd"
-absp(){
-    file_or_folder=$1
-    # check if file_or_folder is provided
-    if [ -n "$file_or_folder" ]; then
-        echo "$cname:$(pwd)/$file_or_folder"
-    else
-        echo "$cname:$(pwd)/$(fzf)"
+absp() {
+    local file_or_folder="$1"
+    local current_dir=$(pwd)
+
+    # If no argument is provided, use fzf to select a file/folder
+    if [ -z "$file_or_folder" ]; then
+        file_or_folder=$(fzf)
+    fi
+
+    # Remove leading ./ or / if present
+    file_or_folder=${file_or_folder#"./"}
+    file_or_folder=${file_or_folder#"/"}
+
+    # If the file_or_folder is not an absolute path, prepend the current directory
+    if [[ "$file_or_folder" != /* ]]; then
+        file_or_folder="$current_dir/$file_or_folder"
+    fi
+
+    # Remove any double slashes
+    file_or_folder=$(echo "$file_or_folder" | sed 's|//|/|g')
+
+    echo "$cname:$file_or_folder"
 }
+
 
 c() {
     cd $1;
