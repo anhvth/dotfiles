@@ -295,14 +295,14 @@ ju-convert(){
 
 pyf(){
     echo "Sort import and format "$1
-    isort $1 && vi -c YAPF $1 -c wq
+    isort $1 && black $1 && vi -c wq $1
 }
+
 
 cu(){
     export CUDA_VISIBLE_DEVICES=$1
 }
 alias what-is-my-ip="wget -qO- https://ipecho.net/plain ; echo"
-alias run-list-cmd="python $HOME/dotfiles/tools/run_list_commands.py"
 
 catssh(){
     # zsh
