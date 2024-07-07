@@ -86,6 +86,17 @@ git config --global core.editor "vim"
 
 # Copy ipython config
 mkdir -p ~/.ipython/profile_default
-cp tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
+#-------ipython config
+config_file="$HOME/.ipython/profile_default/ipython_config.py"
+
+if [ -f "$config_file" ] || [ -L "$config_file" ]; then
+    rm "$config_file"
+    echo "Removed existing ipython_config.py"
+fi
+
+ln -s "$(pwd)/tools/ipython_config.py" "$config_file"
+echo "Created symbolic link for $config_file"
+#---
+
 
 echo "Setup complete!"
