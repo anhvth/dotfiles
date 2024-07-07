@@ -94,7 +94,7 @@ if [ -f "$config_file" ] || [ -L "$config_file" ]; then
     echo "Removed existing ipython_config.py"
 fi
 
-ln -s "$(pwd)/tools/ipython_config.py" "$config_file"
+ln -s "$(pwd)/custom_tools/ipython_config.py" "$config_file"
 echo "Created symbolic link for $config_file"
 #---
 
