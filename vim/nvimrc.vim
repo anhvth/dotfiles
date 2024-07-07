@@ -57,7 +57,6 @@
 		inoremap <leader>if <esc>Iif (<esc>A) {<enter>}<esc>O<tab>
 
     " Debug
-		" vnoremap <leader>d yOprintf(, <esc>pA);<esc>h%a
         nnoremap <leader>d <Esc>iimport ipdb;ipdb.set_trace()<CR><Esc>
         inoremap <leader>c <Esc>0i# <Esc>
         inoremap <leader>C <Esc>:s/# //<CR>

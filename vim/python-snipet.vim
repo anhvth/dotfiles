@@ -3,7 +3,7 @@
     vnoremap <leader>p  yOprint(, <esc>pA);<esc>h%a
 
     inoremap <leader>d <Esc>Oimport ipdb;ipdb.set_trace()<CR><Esc>
-    inoremap <leader>c <Esc>0i# <Esc>
+    inoremap <leader>c <Esc>0i## <Esc>
     inoremap <leader>C <Esc>:s/# //<CR>
     nnoremap <leader>c <Esc>0i# <Esc>
     nnoremap <leader>C <Esc>:s/# //<CR>
