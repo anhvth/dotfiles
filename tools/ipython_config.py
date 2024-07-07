@@ -12,4 +12,4 @@ c.InteractiveShellApp.exec_lines = ['%autoreload 2']
 # Optional: Uncomment to enable auto-suggestions
 # c.TerminalInteractiveShell.autosuggestions_provider = 'AutoSuggestFromHistory'
 
-c.InteractiveShellApp.exec_lines.append('print("\033[92m[AUTORELOAD ON]\033[0m")')
+c.InteractiveShellApp.exec_lines.append('print("\033[92m[AUTORELOAD]\033[0m")')
