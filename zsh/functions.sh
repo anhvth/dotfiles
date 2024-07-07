@@ -29,9 +29,19 @@ absp() {
 
 
 c() {
-    cd $1;
-    ls;
+    if [ -d "$1" ]; then
+        cd "$1"
+    elif [ -f "$1" ]; then
+        cd "$(dirname "$1")"
+    else
+        echo "\e[31m$1 is not a valid file or directory\e[0m"  # Red text for errors
+        return 1
+    fi
+    echo "\e[32mcd to $(pwd)\e[0m"  # Green text for success
+    ls
 }
+
+
 p(){
     CUDA_VISIBLE_DEVICES=$1 python
 }
