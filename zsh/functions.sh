@@ -325,22 +325,33 @@ start_cmd_in_tmux() {
 }
 
 # Function to set environment in ~/.zshrc.sh
-set-conda-env() {
-    local file="$HOME/.zshrc"
-    local prefix="atv"
-    local new_line="atv $1"
+set-conda-env () {
+    local file="$HOME/.zshrc" 
+    local prefix="atv" 
+    local new_env=""
+    
+    # Get the list of conda environments and use fzf to select one
+    new_env=$(conda env list | awk '/^#|^\s*$/ {next} {print $1}' | fzf --prompt "Select conda environment: ")
+
+    # Check if an environment was selected
+    if [ -z "$new_env" ]; then
+        echo "No environment selected."
+        return
+    fi
+
+    local new_line="atv $new_env"
 
     if [ -f "$file" ]; then
-        # Delete line starting with "atv"
         sed -i.bak "/^${prefix}/d" "$file"
-        # Add the new line "atv $1"
         echo "$new_line" >> "$file"
         echo "Deleted line starting with 'atv' and added '$new_line' to $file."
     else
         echo "File $file does not exist."
     fi
-    atv $1
+
+    atv $new_env
 }
+
 
 function forward_ports() {
   
