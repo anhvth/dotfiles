@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 import os
-import sys
+import argparse
 
-
-def print_file_contents(directory):
+def print_file_contents(directory, file_extension=".py"):
+    """
+    Recursively prints the contents of files with the specified extension in the given directory.
+    """
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".py"):
+            if file.endswith(file_extension):
                 file_path = os.path.join(root, file)
                 relative_path = os.path.relpath(file_path, directory)
                 print(f"----")
@@ -20,14 +22,12 @@ def print_file_contents(directory):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <directory_path>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Prints the contents of files in a directory.")
+    parser.add_argument("directory", help="Path to the directory to scan.")
+    parser.add_argument("-e", "--extension", default=".py", help="File extension to look for (default: .py)")
+    args = parser.parse_args()
 
-    project_directory = sys.argv[1]
-
-    if not os.path.isdir(project_directory):
-        print(f"Error: {project_directory} is not a valid directory.")
-        sys.exit(1)
-
-    print_file_contents(project_directory)
+    if not os.path.isdir(args.directory):
+        print(f"Error: {args.directory} is not a valid directory.")
+    else:
+        print_file_contents(args.directory, args.extension)
