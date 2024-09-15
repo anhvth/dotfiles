@@ -55,7 +55,10 @@ set_prompt() {
 
     # Close the bracket and add the prompt symbol
     PS1+="%{$fg[white]%} ] %{$reset_color%}% "
-	PS1+=$'\nCMD: '
+    is_long_path=$(echo $PWD | awk -F/ '{if (length($0) > 50) print 1}')
+    if [ "$is_long_path" = "1" ]; then
+        PS1+=$'\n'
+    fi
 }
 
 # Register the set_prompt function to be called before each prompt is displayed
