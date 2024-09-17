@@ -22,13 +22,38 @@ set_prompt() {
         PS1="${cname_local}${env_name}| "
     fi
 
-    # Start the prompt with a newline and a white-colored opening bracket
+    # Start the prompt with a white-colored opening bracket
     PS1="%{$fg[white]%}[%{$reset_color%}"$PS1
-	# add a newline
-	
 
-    # Add the full current directory path
-    PS1+="%{$fg_bold[cyan]%}${PWD/#$HOME/~}%{$reset_color%}"
+    # Determine if the path is long (greater than 50 characters)
+    if (( ${#PWD} > 50 )); then
+        # Define maximum allowed length
+        max_length=50
+        # Number of characters to keep from the end (reserve space for '.../')
+        keep_length=$((max_length - 4))  # 3 for '...' and 1 for '/'
+
+        # Extract the last 'keep_length' characters from PWD
+        shortened_pwd="${PWD: -$keep_length}"
+
+        # Ensure that the shortened path starts at a directory boundary
+        # Find the first '/' in the shortened path
+        slash_index=$(expr index "$shortened_pwd" '/')
+        if [ "$slash_index" -gt 0 ]; then
+            # Keep from the first '/' onward and prepend '.../'
+            shortened_pwd="...${shortened_pwd:$slash_index-1}"
+        else
+            # If no '/', just prepend '.../'
+            shortened_pwd=".../$shortened_pwd"
+        fi
+
+        display_pwd="$shortened_pwd"
+    else
+        # Use the full PWD, replacing home directory with '~'
+        display_pwd="${PWD/#$HOME/~}"
+    fi
+
+    # Add the display_pwd to PS1 with bold cyan color
+    PS1+="%{$fg_bold[cyan]%}${display_pwd}%{$reset_color%}"
 
     # Add the status code of the last executed command if it's non-zero
     PS1+='%(?.., %{$fg[red]%}%?%{$reset_color%})'
@@ -44,7 +69,6 @@ set_prompt() {
         PS1+=', '
         PS1+="%{$fg[yellow]%}PID:$!%{$reset_color%}"
     fi
-	
 
     # Indicate if the user has sudo privileges active
     CAN_I_RUN_SUDO=$(sudo -n uptime 2>&1 | grep "load" | wc -l)
@@ -55,12 +79,7 @@ set_prompt() {
 
     # Close the bracket and add the prompt symbol
     PS1+="%{$fg[white]%} ] %{$reset_color%}% "
-    is_long_path=$(echo $PWD | awk -F/ '{if (length($0) > 50) print 1}')
-    if [ "$is_long_path" = "1" ]; then
-        PS1+=$'\n'
-    fi
 }
 
 # Register the set_prompt function to be called before each prompt is displayed
 precmd_functions+=(set_prompt)
-
