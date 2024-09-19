@@ -37,7 +37,7 @@ set_prompt() {
 
         # Ensure that the shortened path starts at a directory boundary
         # Find the first '/' in the shortened path
-        slash_index=$(expr index "$shortened_pwd" '/')
+        slash_index=$(echo "$shortened_pwd" | awk -F/ '{print index($0,"/")}')
         if [ "$slash_index" -gt 0 ]; then
             # Keep from the first '/' onward and prepend '.../'
             shortened_pwd="...${shortened_pwd:$slash_index-1}"
