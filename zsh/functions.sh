@@ -412,4 +412,18 @@ function fetch_and_open_video() {
     open $destination_path
 }
 
+generate_pylint_report() {
+    # Remove the existing report file if it exists
+    rm -f report.md
+    # Create a new report file
+    > report.md
 
+    # Find all Python files and run pylint with --errors-only
+    for file in $(find . -name "*.py"); do
+        echo "Running pylint on $file" >> report.md
+        pylint --errors-only "$file" >> report.md
+        echo -e "\n" >> report.md
+    done
+
+    echo "Error report generated in report.md"
+}
