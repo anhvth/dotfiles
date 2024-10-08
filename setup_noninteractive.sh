@@ -43,7 +43,11 @@ echo "Changing the default shell to zsh for the current user..."
 # Copy IPython configuration
 echo "Copying IPython configuration..."
 mkdir -p ~/.ipython/profile_default
-cp tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
+cp custom-tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
+# Configure git
+git config --global user.email "anhvth.226@gmail.com"
+git config --global user.name "anh vo"
+git config --global core.editor "vim"
 
 echo "Setup complete!"
 echo "Run: nvim +PlugInstall +qall" 
