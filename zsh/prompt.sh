@@ -71,11 +71,11 @@ set_prompt() {
     fi
 
     # Indicate if the user has sudo privileges active
-    CAN_I_RUN_SUDO=$(sudo -n uptime 2>&1 | grep "load" | wc -l)
-    if [[ $CAN_I_RUN_SUDO -gt 0 ]]; then
-        PS1+=', '
-        PS1+="%{$fg_bold[red]%}SUDO%{$reset_color%}"
-    fi
+    # CAN_I_RUN_SUDO=$(sudo -n uptime 2>&1 | grep "load" | wc -l)
+    # if [[ $CAN_I_RUN_SUDO -gt 0 ]]; then
+    #     PS1+=', '
+    #     PS1+="%{$fg_bold[red]%}SUDO%{$reset_color%}"
+    # fi
 
     # Close the bracket and add the prompt symbol
     PS1+="%{$fg[white]%} ] %{$reset_color%}% "

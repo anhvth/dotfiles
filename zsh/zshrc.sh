@@ -61,5 +61,5 @@ export PATH=$PATH:$HOME/dotfiles/tools/bin/
 export PATH=$PATH:$HOME/dotfiles/bin/dist
 export PATH=$PATH:$HOME/dotfiles/custom-tools/
 export PATH=$PATH:$HOME/.local/bin
-
+export PATH=$HOME/.fzf/bin/:$PATH
 
