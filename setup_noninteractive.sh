@@ -54,7 +54,6 @@ nvim +PlugInstall +qall
 
 # Change the default shell to zsh without prompting for password
 echo "Changing the default shell to zsh for the current user..."
-sudo chsh -s "$(which zsh)" "$USER"
 
 # Configure Git
 echo "Configuring Git..."
