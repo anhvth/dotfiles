@@ -35,7 +35,7 @@ fi
 
 # Install Neovim plugins non-interactively
 echo "Installing Neovim plugins..."
-nvim +PlugInstall +qall
+
 
 # Change the default shell to zsh without prompting for password
 echo "Changing the default shell to zsh for the current user..."
@@ -46,3 +46,4 @@ mkdir -p ~/.ipython/profile_default
 cp tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
 
 echo "Setup complete!"
+echo "Run: nvim +PlugInstall +qall" 
