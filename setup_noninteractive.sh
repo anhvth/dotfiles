@@ -1,4 +1,5 @@
 #!/bin/bash
+# /home/anhvth5/dotfiles/setup_noninteractive.sh
 
 set -e
 
@@ -7,25 +8,9 @@ sudo apt-get update -y
 sudo add-apt-repository -y ppa:neovim-ppa/stable
 sudo apt-get update -y
 
-# Define the package installation command
-INSTALL_CMD="sudo apt-get install -y"
-
-# Function to install packages if not already installed
-install_package() {
-    echo "Installing $1..."
-    $INSTALL_CMD "$1"
-}
-
-# Install required packages
+# Install required packages in a single line
 echo "Installing required packages: zsh, neovim, tmux, ripgrep, fzf, silversearcher-ag, curl, git"
-install_package zsh
-install_package neovim
-install_package tmux
-install_package ripgrep
-install_package fzf
-install_package silversearcher-ag
-install_package curl
-install_package git
+sudo apt-get install -y zsh neovim tmux ripgrep fzf silversearcher-ag curl git
 
 # Set up dotfiles
 echo "Setting up dotfiles..."
@@ -54,12 +39,6 @@ nvim +PlugInstall +qall
 
 # Change the default shell to zsh without prompting for password
 echo "Changing the default shell to zsh for the current user..."
-
-# Configure Git
-echo "Configuring Git..."
-git config --global user.email "anhvth.226@gmail.com"
-git config --global user.name "anh vo"
-git config --global core.editor "vim"
 
 # Copy IPython configuration
 echo "Copying IPython configuration..."
