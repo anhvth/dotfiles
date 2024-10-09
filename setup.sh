@@ -39,7 +39,7 @@ echo "3. Set up dotfiles"
 # Check and install required software
 check_and_install zsh
 check_and_install neovim
-check_and_install tmux
+# check_and_install tmux
 
 # Set up dotfiles
 echo "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
@@ -47,7 +47,7 @@ echo "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
 mkdir -p ~/.config/nvim/
 echo "so $HOME/dotfiles/vim/nvimrc.vim" > ~/.config/nvim/init.vim
 
-echo "source-file $HOME/dotfiles/tmux/tmux.conf" > ~/.tmux.conf
+# echo "source-file $HOME/dotfiles/tmux/tmux.conf" > ~/.tmux.conf
 
 # Install vim-plug
 curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \
