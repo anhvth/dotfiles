@@ -17,11 +17,3 @@ tmux
 ```bash
 wget https://raw.githubusercontent.com/anhvth/dotfiles/main/tmux/tmux.conf -O ~/.tmux.conf
 ```
-
-
-# Cheat sheet
-Start vscode-server-web
-
-```bash
-curl -fsSL https://code-server.dev/install.sh | sh && (code-server --bind-addr 0.0.0.0:8080 . | cat ~/.config/code-server/config.yaml)
-```

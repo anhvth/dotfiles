@@ -127,63 +127,6 @@ j(){
     CUDA_VISIBLE_DEVICES=$1 jupyter lab
 }
 
-# docker-run function
-docker-run(){
-    HISTORY_FILE="${HOME}/docker-history/${PWD//\//_}"
-
-    if [ ! -f "$HISTORY_FILE" ]; then
-        mkdir -p "${HOME}/docker-history"
-        touch "$HISTORY_FILE"
-    fi
-
-    if [ -n "$1" ]; then
-        CONTAINER_NAME=$1
-    else
-        CONTAINER_NAME=$DOCKER_ACTIVE_CONTAINER
-    fi
-
-    if docker ps -a | grep "$CONTAINER_NAME" ; then
-        echo "Restarting $CONTAINER_NAME"
-        docker kill "$CONTAINER_NAME"
-        docker rm "$CONTAINER_NAME"
-    else
-        echo "Starting $CONTAINER_NAME"
-    fi
-
-    docker run --name "$CONTAINER_NAME" -it -p "$2":8888 \
-        -v "$(pwd)":/docker-container/ \
-        -v "$HISTORY_FILE":/root/.bash_history \
-        --rm \
-        "$DOCKER_ACTIVE_IMAGE" /bin/bash
-}
-
-# docker-attach function
-docker-attach(){
-    echo "Which container do you want to attach?"
-    docker ps -a
-    read -r container_name
-    echo "Attaching to $container_name"
-    docker attach "$container_name"
-}
-
-# docker-commit function
-docker-commit(){
-    docker commit "$DOCKER_ACTIVE_CONTAINER" "$DOCKER_ACTIVE_IMAGE"
-    echo "Would you like to push $DOCKER_ACTIVE_IMAGE image to the cloud (y/n)?"
-    read -r answer
-
-    if echo "$answer" | grep -iq "^y"; then
-        echo "Pushing $DOCKER_ACTIVE_IMAGE"
-        docker push "$DOCKER_ACTIVE_IMAGE"
-    fi
-}
-
-# docker-kill function
-docker-kill(){
-    docker kill $(docker ps -qa)
-    docker rm $(docker ps -qa)
-}
-
 # atv function
 atv(){
     conda deactivate
@@ -210,22 +153,6 @@ tm() {
     session=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | fzf --exit-0) && tmux "$change" -t "$session" || echo "No sessions found."
 }
 
-# get_remote_file function
-get_remote_file(){
-    rm -f ~/.tmp_allfiles.txt
-    ssh "$1" -t "cd \"$2\" && ls **/*.*" >> ~/.tmp_allfiles1.txt
-    echo " " >> ~/.tmp_allfiles1.txt
-    vi -c "%s/\s\+/\r/g | wq" ~/.tmp_allfiles1.txt
-    vi -c "%s#//#/#g | wq" ~/.tmp_allfiles1.txt
-
-    prefix="scp://$1/$2"
-    echo "$prefix"
-    awk -v prefix="$prefix/" '{print prefix $0}' ~/.tmp_allfiles1.txt >> ~/.tmp_allfiles.txt
-    sort ~/.tmp_allfiles.txt | uniq > ~/.tmp_allfiles_sorted.txt
-    mv ~/.tmp_allfiles_sorted.txt ~/.tmp_allfiles.txt
-    cat ~/.tmp_allfiles.txt
-}
-
 # fd function - Find directory projects
 fd() {
     local dir
@@ -241,13 +168,6 @@ fkill() {
     if [ -n "$pid" ]; then
         echo "$pid" | xargs kill -${1:-9}
     fi
-}
-
-# download-google function
-download-google(){
-    echo "Filename: $1"
-    echo "FileID: $2"
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1/p')&id=$2" -O "$1" && rm -rf /tmp/cookies.txt
 }
 
 # start_docker function
