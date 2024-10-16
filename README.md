@@ -7,11 +7,11 @@ git clone https://github.com/anhvth/dotfiles ~/dotfiles --single-branch && cd ~/
 
 # Alias only
 ```bash
- wget https://raw.githubusercontent.com/anhvth/dotfiles/master/zsh/alias.sh -O ~/.alias.h && \
+ wget https://raw.githubusercontent.com/anhvth/dotfiles/master/bash/bashrc.sh -O ~/.alias.h && \
  echo "source ~/.alias.h">> ~/.bashrc && \
  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && \
  ~/.fzf/install
-wget https://raw.githubusercontent.com/anhvth/dotfiles/main/bash/bashrc.sh -O /tmp/bashrc && cat /tmp/bashrc >> ~/.bashrc
+
 ```
 tmux
 ```bash
