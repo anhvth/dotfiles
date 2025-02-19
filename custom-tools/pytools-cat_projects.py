@@ -6,9 +6,9 @@ import argparse
 
 from pydantic import BaseModel
 from typing import List
-from openai import OpenAI
+# from openai import OpenAI
 
-client = OpenAI()
+# client = OpenAI()
 
 
 def summarize_python_file(python_file: str) -> str:
@@ -93,13 +93,14 @@ def print_file_contents(inputs, file_extensions=".py", sumarize=False):
                     if is_valid_ext(file):
                         file_path = os.path.join(root, file)
                         file_paths.append(file_path)
-            from speedy import multi_thread  # type: ignore
+            from speedy_utils import multi_thread  # type: ignore
 
             if sumarize:
                 f = lambda file: get_text2print(file, sumarize=True)
             else:
                 f = get_text2print
-            texts = multi_thread(f, file_paths, 32)
+            ff = lambda x: f(x)
+            texts = multi_thread(ff, file_paths, 32)
             # texts = [get_text2print(file) for file in file_paths]
             text = "\n".join(texts)
             print(text)
