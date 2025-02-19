@@ -1,4 +1,4 @@
-#!/Users/anhvth/miniconda3/envs/py312/bin/python
+#!/usr/bin/env python3
 
 import os
 import argparse
