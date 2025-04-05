@@ -109,16 +109,29 @@ atv() {
         else
             echo "Virtual environment '$1' not found in ~/python-venv/"
         fi
-    elif [ -n "$VIRTUAL_ENV" ]; then
-        # No parameter, activate default environment
-        source "$VIRTUAL_ENV/bin/activate"
-        echo "Activated default virtual environment: $VIRTUAL_ENV"
     else
-        echo "No default virtual environment is set. Please set one using venv."
+        # No parameter, use fzf to select an environment
+        local env_path
+        env_path=$(find ~/python-venv -mindepth 1 -maxdepth 1 -type d | fzf --prompt="Select virtual environment to activate: ")
+        if [ -n "$env_path" ]; then
+            source "$env_path/bin/activate"
+            echo "Activated virtual environment: $env_path"
+            # update VIRTUAL_ENV to ~/.env
+            if grep -q "^VIRTUAL_ENV=" ~/.env; then
+                sed -i.bak "/^VIRTUAL_ENV=/d" ~/.env
+            fi
+            echo "VIRTUAL_ENV=$env_path" >> ~/.env
+        else
+            echo "No virtual environment selected."
+        fi
     fi
 }
 
-
 if [ -n "$VIRTUAL_ENV" ]; then
-	source $VIRTUAL_ENV/bin/activate
+    # Check if the directory exists, if not, warn the user
+    if [ ! -d "$VIRTUAL_ENV" ]; then
+        echo "⚠️  Warning: The virtual environment directory '$VIRTUAL_ENV' does not exist. Please check your ~/.env file."
+    else
+        source "$VIRTUAL_ENV/bin/activate"
+    fi
 fi
