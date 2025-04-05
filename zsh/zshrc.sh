@@ -1,4 +1,3 @@
-
 # Exports
 export PATH=$PATH:$HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl/
 export VISUAL=vim
@@ -104,12 +103,39 @@ unset_env() {
 	fi
 }
 
+# Function to set aliases persistently
+set_alias() {
+	local aliasname=$1
+	local command=$2
+
+	if [ -z "$aliasname" ] || [ -z "$command" ]; then
+		echo "Usage: set_alias <aliasname> <command>"
+		return 1
+	fi
+
+	local alias_file="$HOME/dotfiles/zsh/alias.sh"
+	
+	# Remove existing alias if it exists
+	if grep -q "^alias ${aliasname}=" "$alias_file"; then
+		sed -i.bak "/^alias ${aliasname}=/d" "$alias_file"
+	fi
+
+	# Add the new alias
+	echo "alias ${aliasname}=\"${command}\"" >> "$alias_file"
+	
+	# Source the alias file to make it immediately available
+	source "$alias_file"
+	
+	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
+}
+
 # Create a helper function to list all method
 helper_zsh_methods() {
 	# Print the usage of all methods per line
 	echo "Usage:"
 	echo "  set_env <varname> <value>       # Set an environment variable in ~/.env"
 	echo "  unset_env <varname>            # Unset an environment variable from ~/.env"
+	echo "  set_alias <aliasname> <command> # Set an alias in your alias file"
 	echo "  venv_list                      # List all available Python virtual environments"
 	echo "  venv_atv                       # Activate a selected Python virtual environment"
 	echo "  venv_create <python-version> <venv-name>  # Create a new Python virtual environment"
