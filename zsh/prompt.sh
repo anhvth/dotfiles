@@ -29,24 +29,11 @@ set_prompt() {
         virtualenv_indicator="%{$fg_bold[green]%}($venv_name)%{$reset_color%}"
     fi
 
-    # # Path handling
-    # local display_pwd=""
-    # if (( ${#PWD} > 50 )); then
-    #     local max_length=50
-    #     local keep_length=$((max_length - 4))
-    #     local shortened_pwd="${PWD: -$keep_length}"
-    #     local slash_index=${shortened_pwd%%/*}
-    #     if [[ -n "$slash_index" ]]; then
-    #         display_pwd="...${shortened_pwd#*/}"
-    #     else
-    #         display_pwd=".../$shortened_pwd"
-    #     fi
-    # else
-    # fi
-    display_pwd="${PWD/#$HOME/~}"
+    # Path handling
+    local display_pwd="${PWD/#$HOME/~}"
     path="%{$fg_bold[cyan]%}${display_pwd}%{$reset_color%}"
 
-    # Environment name indicator (will come after path if present)
+    # Environment name indicator
     if [[ -n "$env_name" ]]; then
         env_name_indicator="%{$fg_bold[blue]%}${env_name}%{$reset_color%}"
     fi
@@ -58,8 +45,8 @@ set_prompt() {
     local exit_status_indicator='%(?.., %{$fg_bold[red]%}%?%{$reset_color%})'
     indicators_array+=("$exit_status_indicator")
 
-    # Elapsed time
-    if [[ ${_elapsed[-1]} -ne 0 ]]; then
+    # Elapsed time (fallback if _elapsed is unset)
+    if [[ -n "${_elapsed[-1]}" && ${_elapsed[-1]} -ne 0 ]]; then
         local elapsed_time_indicator="%{$fg[magenta]%}${_elapsed[-1]}s%{$reset_color%}"
         indicators_array+=("$elapsed_time_indicator")
     fi
@@ -102,8 +89,9 @@ set_prompt() {
     else
         PS1+="❯%{$reset_color%} "
     fi
-
 }
 
-# Register the set_prompt function to be called before each prompt is displayed
-precmd_functions+=(set_prompt)
+# Prevent duplicate registration of set_prompt in precmd_functions
+if [[ ! " ${precmd_functions[@]} " =~ " set_prompt " ]]; then
+    precmd_functions+=(set_prompt)
+fi
