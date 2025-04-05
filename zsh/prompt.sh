@@ -20,7 +20,7 @@ set_prompt() {
 
     # Cname indicator
     if [[ -n "$cname" ]]; then
-        cname_indicator="%{$fg_bold[yellow]%}${cname}%{$reset_color%}"
+        cname_indicator="%{$fg_bold[white]%}${cname}%{$reset_color%}"
     fi
 
     # Virtual environment indicator
@@ -66,7 +66,7 @@ set_prompt() {
 
     # PID
     if [[ $! -ne 0 ]]; then
-        local pid_indicator="%{$fg[yellow]%}PID:$!%{$reset_color%}"
+        local pid_indicator="%{$fg[white]%}PID:$!%{$reset_color%}"
         indicators_array+=("$pid_indicator")
     fi
 
