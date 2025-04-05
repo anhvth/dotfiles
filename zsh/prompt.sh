@@ -8,71 +8,95 @@ setopt PROMPT_SUBST
 
 # Function to set the prompt
 set_prompt() {
-    # Start with an empty PS1
-    PS1=""
-    
-    # Add virtual environment indicator at the beginning with better formatting
-    if [[ -n "$VIRTUAL_ENV" ]]; then
-        PS1+="%{$fg_bold[green]%}($(basename $VIRTUAL_ENV))%{$reset_color%} "
-    fi
-    
-    # Opening bracket
-    PS1+="%{$fg[white]%}[%{$reset_color%}"
+    # Initialize prompt components
+    local cname_indicator=""
+    local virtualenv_indicator=""
+    local opening_bracket="%{$fg[white]%}[%{$reset_color%}"
+    local path=""
+    local env_name_indicator=""
+    local status_indicators=""
+    local separator="%{$fg[white]%}|%{$reset_color%}"
+    local closing_bracket="%{$fg[white]%}]%{$reset_color%} %{$fg_bold[white]%}❯%{$reset_color%} "
 
-    # Determine if the path is long (greater than 50 characters)
+    # Cname indicator
+    if [[ -n "$cname" ]]; then
+        cname_indicator="%{$fg_bold[yellow]%}${cname}%{$reset_color%}"
+    fi
+
+    # Virtual environment indicator
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        local venv_name="${VIRTUAL_ENV:t}"
+        virtualenv_indicator="%{$fg_bold[green]%}($venv_name)%{$reset_color%}"
+    fi
+
+    # Path handling
+    local display_pwd=""
     if (( ${#PWD} > 50 )); then
-        max_length=50
-        keep_length=$((max_length - 4))
-        shortened_pwd="${PWD: -$keep_length}"
-        slash_index=$(echo "$shortened_pwd" | awk -F/ '{print index($0,"/")}')
+        local max_length=50
+        local keep_length=$((max_length - 4))
+        local shortened_pwd="${PWD: -$keep_length}"
+        local slash_index=$(echo "$shortened_pwd" | awk -F/ '{print index($0,"/")}')
         if [ "$slash_index" -gt 0 ]; then
-            shortened_pwd="...${shortened_pwd:$slash_index-1}"
+            display_pwd="...${shortened_pwd:$slash_index-1}"
         else
-            shortened_pwd=".../$shortened_pwd"
+            display_pwd=".../$shortened_pwd"
         fi
-        display_pwd="$shortened_pwd"
     else
         display_pwd="${PWD/#$HOME/~}"
     fi
+    path="%{$fg_bold[cyan]%}${display_pwd}%{$reset_color%}"
 
-    # Add the path with bold cyan color
-    PS1+="%{$fg_bold[cyan]%}${display_pwd}%{$reset_color%}"
-    
-    # Handle environment name and cname
-    if [[ -n "$cname" || -n "$env_name" ]]; then
-        PS1+="%{$fg[white]%}|%{$reset_color%}"
-        
-        if [[ -n "$cname" ]]; then
-            PS1+="%{$fg_bold[yellow]%}${cname}%{$reset_color%}"
-            [[ -n "$env_name" ]] && PS1+="%{$fg[white]%}>%{$reset_color%}"
-        fi
-        
-        [[ -n "$env_name" ]] && PS1+="%{$fg_bold[blue]%}${env_name}%{$reset_color%}"
+    # Environment name indicator (will come after path if present)
+    if [[ -n "$env_name" ]]; then
+        env_name_indicator="%{$fg_bold[blue]%}${env_name}%{$reset_color%}"
     fi
 
-    # Add status indicators
-    local indicators=""
-    
-    # Add exit status if non-zero
-    indicators+='%(?.., %{$fg_bold[red]%}%?%{$reset_color%})'
-    
-    # Add elapsed time if applicable
+    # Status indicators
+    local indicators_array=()
+
+    # Exit status
+    local exit_status_indicator='%(?.., %{$fg_bold[red]%}%?%{$reset_color%})'
+    indicators_array+=("$exit_status_indicator")
+
+    # Elapsed time
     if [[ ${_elapsed[-1]} -ne 0 ]]; then
-        [[ -n "$indicators" ]] && indicators+=", "
-        indicators+="%{$fg[magenta]%}${_elapsed[-1]}s%{$reset_color%}"
+        local elapsed_time_indicator="%{$fg[magenta]%}${_elapsed[-1]}s%{$reset_color%}"
+        indicators_array+=("$elapsed_time_indicator")
     fi
-    
-    # Add PID if applicable
+
+    # PID
     if [[ $! -ne 0 ]]; then
-        [[ -n "$indicators" ]] && indicators+=", "
-        indicators+="%{$fg[yellow]%}PID:$!%{$reset_color%}"
+        local pid_indicator="%{$fg[yellow]%}PID:$!%{$reset_color%}"
+        indicators_array+=("$pid_indicator")
     fi
-    
-    # Add indicators if any exist
-    [[ -n "$indicators" ]] && PS1+="$indicators"
-    
-    # Close the bracket and add the prompt symbol
-    PS1+="%{$fg[white]%}]%{$reset_color%} %{$fg_bold[white]%}❯%{$reset_color%} "
+
+    if (( ${#indicators_array[@]} > 0 )); then
+        status_indicators="${(j:, :)indicators_array}"
+    fi
+
+    # Construct PS1 with the desired order: cname, venv, path
+    PS1="${opening_bracket}"
+
+    [[ -n "$cname_indicator" ]] && PS1+="${cname_indicator}"
+
+    if [[ -n "$virtualenv_indicator" && -n "$cname_indicator" ]]; then
+        PS1+="${separator}"
+    fi
+    [[ -n "$virtualenv_indicator" ]] && PS1+="${virtualenv_indicator}"
+
+    if [[ (-n "$path") && (-n "$cname_indicator" || -n "$virtualenv_indicator") ]]; then
+        PS1+="${separator}"
+    elif [[ -n "$path" ]]; then
+        PS1+="" # No separator needed if path is the first component after the opening bracket
+    fi
+    PS1+="${path}"
+
+    if [[ -n "$env_name_indicator" ]]; then
+        PS1+="${separator}${env_name_indicator}"
+    fi
+
+    [[ -n "$status_indicators" ]] && PS1+="$status_indicators"
+    PS1+="${closing_bracket}"
 }
 
 # Register the set_prompt function to be called before each prompt is displayed

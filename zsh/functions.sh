@@ -287,3 +287,10 @@ generate_pylint_report() {
 }
 
 
+rp() {
+    if [ -z "$1" ]; then
+        realpath "$(fzf)"
+    else
+        realpath "$1"
+    fi
+}
