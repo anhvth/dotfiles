@@ -1,20 +1,25 @@
 
 # Exports
-    export PATH=$PATH:$HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl/
-	export VISUAL=vim
-    export PATH=$PATH:$HOME/dotfiles/utils
+export PATH=$PATH:$HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl/
+export VISUAL=vim
+export PATH=$PATH:$HOME/dotfiles/utils
 # Vars
-	HISTFILE=$HOME/.zsh_history
-	SAVEHIST=1000 
-	setopt inc_append_history # To save every command before it is executed 
-	setopt share_history # setopt inc_append_history
+HISTFILE=$HOME/.zsh_history
+SAVEHIST=1000 
+setopt inc_append_history # To save every command before it is executed 
+setopt share_history # setopt inc_append_history
 
-	git config --global push.default current
+# git config --global push.default current
 
-# Aliases
-	mkdir -p /tmp/log
-	
-	stty -ixon
+stty -ixon
+
+if [ -f ~/.env ]; then
+    source ~/.env
+else
+    echo "No ~/.env file found."
+fi
+
+source $HOME/dotfiles/zsh/venv.sh
 
 
 autoload -U compinit
@@ -63,3 +68,52 @@ export PATH=$PATH:$HOME/dotfiles/custom-tools/
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$HOME/.fzf/bin/:$PATH
 
+
+set_env() {
+	local varname=$1
+	local value=$2
+
+	if [ -z "$varname" ] || [ -z "$value" ]; then
+		echo "Usage: set_env <varname> <value>"
+		return 1
+	fi
+
+	# Remove existing entry for the variable
+	if grep -q "^${varname}=" ~/.env; then
+		sed -i.bak "/^${varname}=/d" ~/.env
+	fi
+
+	# Add the new value
+	echo "${varname}=${value}" >> ~/.env
+	echo "Set ${varname}=${value} in ~/.env"
+}
+unset_env() {
+	local varname=$1
+
+	if [ -z "$varname" ]; then
+		echo "Usage: unset_env <varname>"
+		return 1
+	fi
+
+	# Remove the entry for the variable
+	if grep -q "^${varname}=" ~/.env; then
+		sed -i.bak "/^${varname}=/d" ~/.env
+		echo "Unset ${varname} from ~/.env"
+	else
+		echo "${varname} not found in ~/.env"
+	fi
+}
+
+# Create a helper function to list all method
+helper_zsh_methods() {
+	# Print the usage of all methods per line
+	echo "Usage:"
+	echo "  set_env <varname> <value>       # Set an environment variable in ~/.env"
+	echo "  unset_env <varname>            # Unset an environment variable from ~/.env"
+	echo "  venv_list                      # List all available Python virtual environments"
+	echo "  venv_atv                       # Activate a selected Python virtual environment"
+	echo "  venv_create <python-version> <venv-name>  # Create a new Python virtual environment"
+	echo "  venv_remove                    # Remove a selected Python virtual environment"
+	echo "  venv                           # Set and activate the default Python virtual environment"
+	echo "  atv [venv-name]                # Activate the default or a specific Python virtual environment"
+}

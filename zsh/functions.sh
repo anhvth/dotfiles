@@ -101,14 +101,6 @@ docker-kill(){
 }
 
 
-atv(){
-	conda deactivate
-    name=$1
-	conda activate $name
-    export env_name=$name
-    echo $env_name > ~/.last_env.txt
-    echo "Activated:"$name
-}
 
 tm() {
   [[ -n "$TMUX" ]] && change="switch-client" || change="attach-session"
@@ -239,39 +231,7 @@ use-ssh(){
     cd $root
 }
 
-export PATH=$PATH:$HOME/miniconda3/bin
 
-rss(){
-hostname=$(cat ~/.ssh/config | grep "Host "| fzf | awk {'print $2'})
-filename=$(ls | fzf)
-BUFFER="rs $filename $hostname:/"
-zle accept-line
-
-}
-
-rsab(){
-rs $1 ~/.cache/sync
-rs ~/.cache/sync $2
-
-}
-
-wget-rs(){
-    tmp=$(mktemp)
-    echo "Download $1 in to $tmp"
-    wget $1 -O $tmp
-    rs $tmp $2
-}
-
-
-
-convert2mp4(){
-    ffmpeg -i $1 -c:v vp9 -c:a libvorbis $2
-}
-
-
-convert2mp4(){
-    ffmpeg -i $1 -c:v vp9 -c:a libvorbis $2
-}
 
 ju-convert(){
     echo "Convert "$1"To python"
@@ -288,22 +248,6 @@ pyf(){
 cu(){
     export CUDA_VISIBLE_DEVICES=$1
 }
-
-catssh(){
-    # zsh
-    # Check if help
-    num_of_args=$#
-    if [ $num_of_args -lt 3 ]; then
-        echo "catssh <file> <machine> <target_file>"
-        return
-    fi
-
-    FILE=$1
-    MACHINE=$2
-    TARGET_FILE=$3
-    cat $FILE | ssh $MACHINE "cat > $TARGET_FILE"
-}
-
 
 cuda-ls () {
 	nvidia-smi --query-gpu=index,gpu_name,memory.free --format=csv,noheader | sort -t ',' -k3 -n -r
@@ -324,93 +268,7 @@ start_cmd_in_tmux() {
     fi
 }
 
-# Function to set environment in ~/.zshrc.sh
-set-conda-env () {
-    local file="$HOME/.zshrc" 
-    local prefix="atv" 
-    local new_env=""
-    
-    # Get the list of conda environments and use fzf to select one
-    new_env=$(conda env list | awk '/^#|^\s*$/ {next} {print $1}' | fzf --prompt "Select conda environment: ")
 
-    # Check if an environment was selected
-    if [ -z "$new_env" ]; then
-        echo "No environment selected."
-        return
-    fi
-
-    local new_line="atv $new_env"
-
-    if [ -f "$file" ]; then
-        sed -i.bak "/^${prefix}/d" "$file"
-        echo "$new_line" >> "$file"
-        echo "Deleted line starting with 'atv' and added '$new_line' to $file."
-    else
-        echo "File $file does not exist."
-    fi
-
-    atv $new_env
-}
-
-
-function forward_ports() {
-  
-  local port=$1
-  
-  if [ -z "$port" ]; then
-    echo "Port number is required."
-    return 1
-  fi
-
-  ssh kube -L ${port}:localhost:${port} &
-  SSH_PID=$!
-  
-  # Give SSH tunnel some time to establish
-  sleep 2
-  
-  kubectl port-forward -n kubeflow-anhvth5 pod/anhvth-0 ${port}:${port} &
-  KUBECTL_PID=$!
-  
-  # Wait for the user to terminate the function
-  trap "kill $SSH_PID $KUBECTL_PID" SIGINT SIGTERM
-  
-  wait $KUBECTL_PID
-  wait $SSH_PID
-}
-
-
-
-
-# Add this function to your .bashrc, .zshrc, or another appropriate shell configuration file
-
-function fetch_and_open_video() {
-    local video_path="$1"
-    local destination_path="/tmp/video.mp4"
-    local quicktime_bin="/Applications/QuickTime Player.app"
-
-    if [ -z "$video_path" ]; then
-        echo "Usage: fetch_and_open_video <video_path>"
-        return 1
-    fi
-
-    echo "Checking if QuickTime Player is running..."
-    if pgrep -x "QuickTime Player" > /dev/null; then
-        echo "QuickTime Player is running. Closing it first..."
-        osascript -e 'tell application "QuickTime Player" to quit'
-        sleep 0.1  # Give some time for QuickTime Player to quit
-    fi
-
-    echo "Transferring video..."
-    rsync -avzhe ssh --progress "$video_path" "$destination_path"
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to transfer video."
-        return 1
-    fi
-
-    echo "Opening video with QuickTime Player..."
-    open $destination_path
-}
 
 generate_pylint_report() {
     # Remove the existing report file if it exists
@@ -427,3 +285,5 @@ generate_pylint_report() {
 
     echo "Error report generated in report.md"
 }
+
+
