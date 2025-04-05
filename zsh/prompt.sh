@@ -16,7 +16,7 @@ set_prompt() {
     local env_name_indicator=""
     local status_indicators=""
     local separator="%{$fg[white]%}|%{$reset_color%}"
-    local closing_bracket="%{$fg[white]%}]%{$reset_color%} %{$fg_bold[white]%}❯%{$reset_color%} "
+    local closing_bracket="%{$fg[white]%}]%{$reset_color%} %{$fg_bold[white]%}"
 
     # Cname indicator
     if [[ -n "$cname" ]]; then
@@ -29,21 +29,21 @@ set_prompt() {
         virtualenv_indicator="%{$fg_bold[green]%}($venv_name)%{$reset_color%}"
     fi
 
-    # Path handling
-    local display_pwd=""
-    if (( ${#PWD} > 50 )); then
-        local max_length=50
-        local keep_length=$((max_length - 4))
-        local shortened_pwd="${PWD: -$keep_length}"
-        local slash_index=$(echo "$shortened_pwd" | awk -F/ '{print index($0,"/")}')
-        if [ "$slash_index" -gt 0 ]; then
-            display_pwd="...${shortened_pwd:$slash_index-1}"
-        else
-            display_pwd=".../$shortened_pwd"
-        fi
-    else
-        display_pwd="${PWD/#$HOME/~}"
-    fi
+    # # Path handling
+    # local display_pwd=""
+    # if (( ${#PWD} > 50 )); then
+    #     local max_length=50
+    #     local keep_length=$((max_length - 4))
+    #     local shortened_pwd="${PWD: -$keep_length}"
+    #     local slash_index=${shortened_pwd%%/*}
+    #     if [[ -n "$slash_index" ]]; then
+    #         display_pwd="...${shortened_pwd#*/}"
+    #     else
+    #         display_pwd=".../$shortened_pwd"
+    #     fi
+    # else
+    # fi
+    display_pwd="${PWD/#$HOME/~}"
     path="%{$fg_bold[cyan]%}${display_pwd}%{$reset_color%}"
 
     # Environment name indicator (will come after path if present)
@@ -97,6 +97,12 @@ set_prompt() {
 
     [[ -n "$status_indicators" ]] && PS1+="$status_indicators"
     PS1+="${closing_bracket}"
+    if [[ ${#PS1} -gt 250 ]]; then
+        PS1+=$'\n❯%{$reset_color%} '
+    else
+        PS1+="❯%{$reset_color%} "
+    fi
+
 }
 
 # Register the set_prompt function to be called before each prompt is displayed

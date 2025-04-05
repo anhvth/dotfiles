@@ -3,16 +3,16 @@ venv_list() {
 }
 
 # Function to activate a selected Python virtual environment
-venv_atv() {
-    local env_path
-    env_path=$(find ~/python-venv -mindepth 1 -maxdepth 1 -type d | fzf)
-    if [ -n "$env_path" ]; then
-        source "$env_path/bin/activate"
-        echo "ℹ️  Activated virtual environment: $env_path"
-    else
-        echo "⚠️  No virtual environment selected."
-    fi
-}
+# venv_atv() {
+#     local env_path
+#     env_path=$(find ~/python-venv -mindepth 1 -maxdepth 1 -type d | fzf)
+#     if [ -n "$env_path" ]; then
+#         source "$env_path/bin/activate"
+#         echo "ℹ️  Activated virtual environment: $env_path"
+#     else
+#         echo "⚠️  No virtual environment selected."
+#     fi
+# }
 venv_create() {
     # Check if both arguments are provided
     if [ -z "$1" ] || [ -z "$2" ]; then
