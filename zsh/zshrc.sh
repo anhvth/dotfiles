@@ -129,17 +129,3 @@ set_alias() {
 	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
 }
 
-# Create a helper function to list all method
-helper_zsh_methods() {
-	# Print the usage of all methods per line
-	echo "Usage:"
-	echo "  set_env <varname> <value>       # Set an environment variable in ~/.env"
-	echo "  unset_env <varname>            # Unset an environment variable from ~/.env"
-	echo "  set_alias <aliasname> <command> # Set an alias in your alias file"
-	echo "  venv_list                      # List all available Python virtual environments"
-	echo "  venv_atv                       # Activate a selected Python virtual environment"
-	echo "  venv_create <python-version> <venv-name>  # Create a new Python virtual environment"
-	echo "  venv_remove                    # Remove a selected Python virtual environment"
-	echo "  venv                           # Set and activate the default Python virtual environment"
-	echo "  atv [venv-name]                # Activate the default or a specific Python virtual environment"
-}
