@@ -98,7 +98,11 @@ bindkey "^n" ctrl_n
 
 # Search history using fzf
 function search_history() {
-	BUFFER=$(history | tail -r | fzf | awk '{$1=""; print substr($0,2)}')
+	if command -v tac &>/dev/null; then
+		BUFFER=$(history | tac | fzf | awk '{$1=""; print substr($0,2)}')
+	else
+		BUFFER=$(history | tail -r | fzf | awk '{$1=""; print substr($0,2)}')
+	fi
 	zle end-of-line
 }
 zle -N search_history
@@ -119,16 +123,9 @@ HELPER_MESSAGES=(
   "ctrl+r:Search history using fzf"
   "ctrl+h:Show this help message"
   ""
-  "HELPER FUNCTIONS:"
   "set_env <varname> <value>:Set an environment variable in ~/.env"
   "unset_env <varname>:Unset an environment variable from ~/.env"
   "set_alias <aliasname> <command>:Set an alias in your alias file"
-  "venv_list:List all available Python virtual environments"
-  "venv_atv:Activate a selected Python virtual environment"
-  "venv_create <python-version> <venv-name>:Create a new Python virtual environment"
-  "venv_remove:Remove a selected Python virtual environment"
-  "venv:Set and activate the default Python virtual environment"
-  "atv [venv-name]:Activate the default or a specific Python virtual environment"
 )
 
 function show_keybindings_help() {
