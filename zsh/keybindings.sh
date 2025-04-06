@@ -1,3 +1,7 @@
+# ------------------------------
+# Directory Navigation
+# ------------------------------
+
 # Up one directory
 function up_widget() {
 	BUFFER="cd .."
@@ -5,6 +9,10 @@ function up_widget() {
 }
 zle -N up_widget
 bindkey "^k" up_widget
+
+# ------------------------------
+# Git Commands
+# ------------------------------
 
 # Git commit preparation
 function git_prepare() {
@@ -26,6 +34,10 @@ function git_sync() {
 zle -N git_sync
 bindkey "^p" git_sync
 
+# ------------------------------
+# Command Editing and Execution
+# ------------------------------
+
 # Edit and rerun command
 function edit_and_run() {
 	BUFFER="fc"
@@ -33,22 +45,6 @@ function edit_and_run() {
 }
 zle -N edit_and_run
 bindkey "^v" edit_and_run
-
-# Clear screen
-function ctrl_l() {
-	BUFFER="clear"
-	zle accept-line
-}
-zle -N ctrl_l
-bindkey "^l" ctrl_l
-
-# List files
-function ctrl_n() {
-	BUFFER="ls"
-	zle accept-line
-}
-zle -N ctrl_n
-bindkey "^n" ctrl_n
 
 # Add sudo to the current command
 function add_sudo() {
@@ -66,24 +62,42 @@ function add_code_debug() {
 zle -N add_code_debug
 bindkey "^o" add_code_debug
 
-# Push file using rsync
-function rs_push() {
-	filename=$(ls | fzf)
-	hostname=$(awk '/Host / {print $2}' ~/.ssh/config | fzf)
-	BUFFER="rs $filename $hostname:/"
-	zle end-of-line
+# ------------------------------
+# Utility Commands
+# ------------------------------
+
+# Clear screen
+function ctrl_l() {
+	BUFFER="clear"
+	zle accept-line
 }
-zle -N rs_push
-bindkey "^u" rs_push
+zle -N ctrl_l
+bindkey "^l" ctrl_l
+
+# List files
+function ctrl_n() {
+	BUFFER="ls"
+	zle accept-line
+}
+zle -N ctrl_n
+bindkey "^n" ctrl_n
+
+# ------------------------------
+# File Transfer
+# ------------------------------
 
 # Pull file using rsync
-function rs_pull() {
-	hostname=$(awk '/Host / {print $2}' ~/.ssh/config | fzf)
-	BUFFER="rs $hostname:/"
-	zle end-of-line
-}
-zle -N rs_pull
-bindkey "^y" rs_pull
+# function rs_pull() {
+# 	hostname=$(awk '/Host / {print $2}' ~/.ssh/config | fzf)
+# 	BUFFER="rs $hostname:/"
+# 	zle end-of-line
+# }
+# zle -N rs_pull
+# bindkey "^y" rs_pull
+
+# ------------------------------
+# Remote Setup
+# ------------------------------
 
 # Run remote setup script
 function remote_config() {
@@ -93,9 +107,13 @@ function remote_config() {
 zle -N remote_config
 bindkey "^z" remote_config
 
+# ------------------------------
+# History Search
+# ------------------------------
+
 # Search history using fzf
 function search_history() {
-	BUFFER=$(history | fzf | awk '{$1=""; print substr($0,2)}')
+	BUFFER=$(history | tail -r | fzf | awk '{$1=""; print substr($0,2)}')
 	zle end-of-line
 }
 zle -N search_history
