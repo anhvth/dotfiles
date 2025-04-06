@@ -129,3 +129,7 @@ set_alias() {
 	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
 }
 
+if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV" ]; then
+	source "$VIRTUAL_ENV/bin/activate"
+	echo "✅ Activated virtual environment from VIRTUAL_ENV: $(basename $VIRTUAL_ENV)"
+fi
