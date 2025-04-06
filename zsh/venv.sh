@@ -113,3 +113,45 @@ venv() {
             ;;
     esac
 }
+
+
+
+install_python() {
+    if [ -z "$1" ]; then
+        echo "ℹ️  Usage: install_python <python-version>"
+        return 1
+    fi
+
+    local python_version=$1
+    local python_url="https://www.python.org/ftp/python/$python_version/Python-$python_version.tgz"
+    local temp_dir=$(mktemp -d)
+    local install_dir=~/python-builds/$python_version
+
+    echo "ℹ️  Downloading Python $python_version..."
+    curl -o "$temp_dir/Python-$python_version.tgz" "$python_url"
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to download Python $python_version"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    echo "ℹ️  Extracting Python $python_version..."
+    tar -xzf "$temp_dir/Python-$python_version.tgz" -C "$temp_dir"
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to extract Python $python_version"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    echo "ℹ️  Building and installing Python $python_version..."
+    cd "$temp_dir/Python-$python_version"
+    ./configure --prefix="$install_dir" && make && make install
+    if [ $? -eq 0 ]; then
+        echo "✅ Python $python_version installed at $install_dir"
+        echo "ℹ️  Add $install_dir/bin to your PATH to use this Python version."
+    else
+        echo "❌ Failed to build and install Python $python_version"
+    fi
+
+    rm -rf "$temp_dir"
+}
