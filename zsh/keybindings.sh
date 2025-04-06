@@ -118,3 +118,36 @@ function search_history() {
 }
 zle -N search_history
 bindkey "^r" search_history
+
+# ------------------------------
+# Echo Helper
+# ------------------------------
+
+# Echo a message
+HELPER_MESSAGES=(
+  "ctrl+k:Up one directory"
+  "ctrl+g:Git commit preparation"
+  "ctrl+p:Git sync (pull and commit)"
+  "ctrl+v:Edit and rerun command"
+  "ctrl+s:Add sudo to the current command"
+  "ctrl+o:Add code-debug to the current command"
+  "ctrl+l:Clear screen"
+  "ctrl+n:List files"
+  "ctrl+z:Run remote setup script"
+  "ctrl+r:Search history using fzf"
+  "ctrl+h:Show this help message"
+)
+
+function show_keybindings_help() {
+  echo "\nAvailable key bindings:"
+  echo "======================="
+  for msg in "${HELPER_MESSAGES[@]}"; do
+    key="${msg%%:*}"
+    description="${msg#*:}"
+    printf "%-10s %s\n" "$key" "$description"
+  done
+  echo ""
+  zle redisplay
+}
+zle -N show_keybindings_help
+bindkey "^h" show_keybindings_help
