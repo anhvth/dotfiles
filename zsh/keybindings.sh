@@ -92,3 +92,11 @@ function remote_config() {
 }
 zle -N remote_config
 bindkey "^z" remote_config
+
+# Search history using fzf
+function search_history() {
+	BUFFER=$(history | fzf | awk '{$1=""; print substr($0,2)}')
+	zle end-of-line
+}
+zle -N search_history
+bindkey "^r" search_history
