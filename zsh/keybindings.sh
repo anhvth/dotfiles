@@ -26,14 +26,6 @@ function git_prepare() {
 zle -N git_prepare
 bindkey "^g" git_prepare
 
-# Git sync
-function git_sync() {
-	BUFFER="git pull && git add -A && git commit -m 'code sync'"
-	zle accept-line
-}
-zle -N git_sync
-bindkey "^p" git_sync
-
 # ------------------------------
 # Command Editing and Execution
 # ------------------------------
@@ -100,12 +92,12 @@ bindkey "^n" ctrl_n
 # ------------------------------
 
 # Run remote setup script
-function remote_config() {
-	BUFFER="~/.remote_setup.sh"
-	zle accept-line
-}
-zle -N remote_config
-bindkey "^z" remote_config
+# function remote_config() {
+# 	BUFFER="~/.remote_setup.sh"
+# 	zle accept-line
+# }
+# zle -N remote_config
+# bindkey "^z" remote_config
 
 # ------------------------------
 # History Search
@@ -127,13 +119,11 @@ bindkey "^r" search_history
 HELPER_MESSAGES=(
   "ctrl+k:Up one directory"
   "ctrl+g:Git commit preparation"
-  "ctrl+p:Git sync (pull and commit)"
   "ctrl+v:Edit and rerun command"
   "ctrl+s:Add sudo to the current command"
   "ctrl+o:Add code-debug to the current command"
   "ctrl+l:Clear screen"
   "ctrl+n:List files"
-  "ctrl+z:Run remote setup script"
   "ctrl+r:Search history using fzf"
   "ctrl+h:Show this help message"
 )
