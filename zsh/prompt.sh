@@ -99,4 +99,4 @@ set_prompt() {
 # set_prompt
 # echo "Prompt set to: $PS1"
 # export PROMPT="$(set_prompt)"
-export PROMPT='%F{111}'"${cname}"':%F{2}%~ %(!.#.$)%f '
+export PROMPT='%F{111}'"${cname}"'|%F{2}%~ %(!.#.$)%f '

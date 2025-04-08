@@ -64,7 +64,7 @@ export PATH=$PATH:$HOME/dotfiles/squashfs-root/usr/bin/
 export PATH=$PATH:$HOME/dotfiles/tools/bin/
 export PATH=$PATH:$HOME/dotfiles/bin/dist
 export PATH=$PATH:$HOME/dotfiles/custom-tools/
-export PATH=$PATH:$HOME/.local/bin
+export PATH=$PATH=$HOME/.local/bin
 export PATH=$HOME/.fzf/bin/:$PATH
 
 
@@ -131,5 +131,5 @@ set_alias() {
 
 if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV" ]; then
 	source "$VIRTUAL_ENV/bin/activate"
-	echo "✅ Activated virtual environment from VIRTUAL_ENV: $(basename $VIRTUAL_ENV)"
+	echo "✅ $(basename $VIRTUAL_ENV) virtual environment is active."
 fi
