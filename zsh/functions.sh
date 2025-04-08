@@ -300,3 +300,4 @@ update_dotfiles() {
     cd ~/dotfiles && git pull
     echo "Successfully updated dotfiles repository."
 }
+
