@@ -1,3 +1,9 @@
+ZSH_THEME="fino"
+# Oh My Zsh theem
+export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
+source $ZSH/oh-my-zsh.sh
+
+
 # Exports
 export PATH=$PATH:$HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl/
 export VISUAL=vim
@@ -6,10 +12,7 @@ export PATH=$PATH:$HOME/dotfiles/utils
 HISTFILE=$HOME/.zsh_history
 SAVEHIST=1000 
 setopt inc_append_history # To save every command before it is executed 
-setopt share_history # setopt inc_append_history
-
-# git config --global push.default current
-
+setopt share_history #
 stty -ixon
 
 if [ -f ~/.env ]; then
@@ -41,10 +44,7 @@ source $HOME/dotfiles/zsh/plugins/fixls.zsh
 source ~/dotfiles/zsh/alias.sh
 source ~/dotfiles/zsh/functions.sh
 
-# Oh My Zsh
-export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
-ZSH_THEME="fino"
-source $ZSH/oh-my-zsh.sh
+
 
 
 # Fix for arrow-key searching
@@ -69,7 +69,15 @@ export PATH=$PATH:$HOME/dotfiles/bin/dist
 export PATH=$PATH:$HOME/dotfiles/custom-tools/
 export PATH=$PATH=$HOME/.local/bin
 export PATH=$HOME/.fzf/bin/:$PATH
-# 
+# Brew
+if [ -d /opt/homebrew/bin ]; then
+	export PATH=$PATH:/opt/homebrew/bin/
+	export PATH=$PATH:/opt/homebrew/sbin/
+else
+	export PATH=$PATH:/usr/local/bin/
+	export PATH=$PATH:/usr/local/sbin/
+fi
+
 
 set_env() {
 	local varname=$1
