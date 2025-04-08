@@ -294,3 +294,10 @@ rp() {
         realpath "$1"
     fi
 }
+
+update_dotfiles() {
+    # Update the dotfiles repository
+    cd ~/dotfiles
+    git pull origin master
+    echo "Dotfiles updated successfully."
+}
