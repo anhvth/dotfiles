@@ -6,6 +6,13 @@ autoload -U colors && colors
 # Enable prompt substitution to allow dynamic content
 setopt PROMPT_SUBST
 
+# Function to detect the current Git branch
+function get_git_branch() {
+    local branch
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    echo "$branch"
+}
+
 # Function to set the prompt
 set_prompt() {
     # Initialize prompt components
@@ -17,6 +24,7 @@ set_prompt() {
     local status_indicators=""
     local separator="%{$fg[white]%}|%{$reset_color%}"
     local closing_bracket="%{$fg[white]%}]%{$reset_color%} %{$fg_bold[white]%}"
+    local git_branch_indicator=""
 
     # Cname indicator
     if [[ -n "$cname" ]]; then
@@ -38,24 +46,16 @@ set_prompt() {
         env_name_indicator="%{$fg_bold[blue]%}${env_name}%{$reset_color%}"
     fi
 
+    # Git branch indicator
+    local branch="$(get_git_branch)"
+    if [[ -n "$branch" ]]; then
+        git_branch_indicator="%{$fg_bold[yellow]%}${branch}%{$reset_color%}"
+    fi
+
     # Status indicators
     local indicators_array=()
 
     # Exit status
-    local exit_status_indicator='%(?.., %{$fg_bold[red]%}%?%{$reset_color%})'
-    indicators_array+=("$exit_status_indicator")
-
-    # Elapsed time (fallback if _elapsed is unset)
-    if [[ -n "${_elapsed[-1]}" && ${_elapsed[-1]} -ne 0 ]]; then
-        local elapsed_time_indicator="%{$fg[magenta]%}${_elapsed[-1]}s%{$reset_color%}"
-        indicators_array+=("$elapsed_time_indicator")
-    fi
-
-    # PID
-    if [[ $! -ne 0 ]]; then
-        local pid_indicator="%{$fg[white]%}PID:$!%{$reset_color%}"
-        indicators_array+=("$pid_indicator")
-    fi
 
     if (( ${#indicators_array[@]} > 0 )); then
         status_indicators="${(j:, :)indicators_array}"
@@ -91,7 +91,12 @@ set_prompt() {
     fi
 }
 
-# Prevent duplicate registration of set_prompt in precmd_functions
-if [[ ! " ${precmd_functions[@]} " =~ " set_prompt " ]]; then
-    precmd_functions+=(set_prompt)
-fi
+# # Prevent duplicate registration of set_prompt in precmd_functions
+# if [[ ! " ${precmd_functions[@]} " =~ " set_prompt " ]]; then
+#     precmd_functions+=(set_prompt)
+# fi
+
+# set_prompt
+# echo "Prompt set to: $PS1"
+# export PROMPT="$(set_prompt)"
+export PROMPT='%F{111}'"${cname}"':%F{2}%~ %(!.#.$)%f '
