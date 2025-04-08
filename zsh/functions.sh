@@ -297,7 +297,6 @@ rp() {
 
 update_dotfiles() {
     # Update the dotfiles repository
-    cd ~/dotfiles
-    git pull origin master
-    echo "Dotfiles updated successfully."
+    cd ~/dotfiles && git pull
+    echo "Successfully updated dotfiles repository."
 }
