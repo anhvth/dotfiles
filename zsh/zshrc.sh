@@ -1,4 +1,4 @@
-ZSH_THEME="fino"
+ZSH_THEME="rkj"
 # Oh My Zsh theem
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
 source $ZSH/oh-my-zsh.sh
