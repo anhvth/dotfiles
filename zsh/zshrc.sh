@@ -23,7 +23,7 @@ fi
 
 source $HOME/dotfiles/zsh/venv.sh
 
-VSCODE=code-insiders
+VSCODE=code
 autoload -U compinit
 plugins=(
 	docker vscode
