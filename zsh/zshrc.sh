@@ -10,7 +10,7 @@ export VISUAL=vim
 export PATH=$PATH:$HOME/dotfiles/utils
 # Vars
 HISTFILE=$HOME/.zsh_history
-SAVEHIST=1000 
+SAVEHIST=10000
 setopt inc_append_history # To save every command before it is executed 
 setopt share_history #
 stty -ixon
@@ -31,7 +31,6 @@ plugins=(
 
 for plugin ($plugins); do
     fpath=($HOME/dotfiles/zsh/plugins/oh-my-zsh/plugins/$plugin $fpath)
-	echo "Loading $plugin "
 done
 
 compinit
