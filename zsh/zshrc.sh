@@ -26,11 +26,12 @@ source $HOME/dotfiles/zsh/venv.sh
 
 autoload -U compinit
 plugins=(
-	docker
+	docker vscode
 )
 
 for plugin ($plugins); do
     fpath=($HOME/dotfiles/zsh/plugins/oh-my-zsh/plugins/$plugin $fpath)
+	echo "Loading $plugin "
 done
 
 compinit
