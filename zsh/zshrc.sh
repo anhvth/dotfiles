@@ -1,7 +1,7 @@
 ZSH_THEME="fishy"
 # Oh My Zsh theem
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
-source $ZSH/oh-my-zsh.sh
+
 
 
 # Exports
@@ -23,7 +23,7 @@ fi
 
 source $HOME/dotfiles/zsh/venv.sh
 
-
+VSCODE=code-insiders
 autoload -U compinit
 plugins=(
 	docker vscode
@@ -145,3 +145,5 @@ if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV" ]; then
 	source "$VIRTUAL_ENV/bin/activate"
 	echo "✅ $(basename $VIRTUAL_ENV) virtual environment is active."
 fi
+
+source $ZSH/oh-my-zsh.sh
