@@ -1,6 +1,9 @@
 #------------------------------------------
 # Theme and Oh-My-Zsh Setup
 #------------------------------------------
+
+# reset
+
 ZSH_THEME="muse"
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
 
