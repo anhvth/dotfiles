@@ -21,7 +21,7 @@ atv() {
     fi
 
     set_env "VIRTUAL_ENV" "$selected_venv"
-    source "$selected_venv"
+    zsh
 }
 
 # Create a virtual environment

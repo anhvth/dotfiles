@@ -3,7 +3,7 @@
 #------------------------------------------
 ZSH_THEME="muse"
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
-source $ZSH/oh-my-zsh.sh
+
 
 #------------------------------------------
 # Basic Configuration
@@ -62,14 +62,20 @@ fi
 
 # Source configuration files
 source $HOME/dotfiles/zsh/venv.sh
+source $ZSH/oh-my-zsh.sh
 source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
-# source $HOME/dotfiles/zsh/prompt.sh
 source ~/dotfiles/zsh/alias.sh
 source ~/dotfiles/zsh/functions.sh
+
+
+# Skip global compinit on Ubuntu
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+	skip_global_compinit=1
+fi
 
 #------------------------------------------
 # Plugin Setup
