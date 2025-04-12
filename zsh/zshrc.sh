@@ -169,9 +169,6 @@ fi
 #------------------------------------------
 # Virtual Environment
 #------------------------------------------
-# Activate the virtual environment if it exists
-if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV" ]; then
-	source "$VIRTUAL_ENV/bin/activate"
-	# echo "✅ $(basename $VIRTUAL_ENV) virtual environment is active."
+if [ -f "$VIRTUAL_ENV" ]; then
+	source $VIRTUAL_ENV
 fi
-
