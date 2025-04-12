@@ -20,7 +20,7 @@ stty -ixon # Disable terminal flow control (Ctrl+S, Ctrl+Q)
 
 # Editor configuration
 export VISUAL=vim
-VSCODE=code-insiders
+# VSCODE=code-insiders
 
 # Set FUNCNEST to prevent "maximum nested function level reached" errors
 export FUNCNEST=100000
@@ -86,7 +86,7 @@ fi
 # Plugin configuration
 autoload -U compinit
 plugins=(
-	docker vscode
+	docker 
 )
 
 for plugin ($plugins); do
