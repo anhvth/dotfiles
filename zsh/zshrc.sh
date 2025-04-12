@@ -175,3 +175,7 @@ fi
 if [ -f "$VIRTUAL_ENV" ]; then
     source $VIRTUAL_ENV
 fi
+
+
+# PS1 insert machine name
+PS1=$"cname|$PS1"
