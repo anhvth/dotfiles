@@ -1,7 +1,6 @@
 ZSH_THEME="fishy"
-# Oh My Zsh theem
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
-
+source $ZSH/oh-my-zsh.sh
 
 
 # Exports
@@ -140,9 +139,12 @@ set_alias() {
 	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
 }
 
+
+
+# Activate the virtual environment if it exists
 if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV" ]; then
 	source "$VIRTUAL_ENV/bin/activate"
-	echo "✅ $(basename $VIRTUAL_ENV) virtual environment is active."
+	# echo "✅ $(basename $VIRTUAL_ENV) virtual environment is active."
+	
 fi
 
-source $ZSH/oh-my-zsh.sh
