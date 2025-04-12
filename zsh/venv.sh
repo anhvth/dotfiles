@@ -3,16 +3,40 @@ atv() {
 
     lst="$(ls ~/python-venv/*/bin/activate)"
     if [ -z "$1" ]; then
-        echo "Please select a virtual environment:"
+        # echo "Please select a virtual environment:"
         selected_venv=$(echo "$lst" | fzf --height 40% --reverse --inline-info --preview 'head -n 10 {}' --preview-window=up:30%:wrap)
     else
         selected_venv="$1"
     fi
     # now set to 
     set_env "VIRTUAL_ENV" "$selected_venv"
-    zsh    
+    source $selected_venv
+
 }
 
+venv_create() {
+    # create a virtual environment
+    if [ -z "$1" ]; then
+        echo "Please provide a name for the virtual environment."
+        return 1
+    fi
+
+    local venv_name=$1
+    local venv_dir=~/python-venv/$venv_name
+
+    if [ -d "$venv_dir" ]; then
+        echo "❌ Virtual environment $venv_name already exists."
+        return 1
+    fi
+
+    python3 -m venv "$venv_dir"
+    if [ $? -eq 0 ]; then
+        echo "✅ Virtual environment $venv_name created at $venv_dir"
+    else
+        echo "❌ Failed to create virtual environment $venv_name"
+    fi
+    source "$venv_dir/bin/activate"
+}
 
 install_python() {
     if [ -z "$1" ]; then

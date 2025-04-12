@@ -19,6 +19,9 @@ stty -ixon # Disable terminal flow control (Ctrl+S, Ctrl+Q)
 export VISUAL=vim
 VSCODE=code-insiders
 
+# Set FUNCNEST to prevent "maximum nested function level reached" errors
+export FUNCNEST=100000
+
 #------------------------------------------
 # Path Configuration
 #------------------------------------------
@@ -170,5 +173,5 @@ fi
 # Virtual Environment
 #------------------------------------------
 if [ -f "$VIRTUAL_ENV" ]; then
-	source $VIRTUAL_ENV
+    source $VIRTUAL_ENV
 fi
