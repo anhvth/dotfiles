@@ -5,6 +5,7 @@
 # reset
 
 ZSH_THEME="muse"
+ZSH_THEME="robbyrussell"
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
 
 
