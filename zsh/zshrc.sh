@@ -67,7 +67,8 @@ fi
 source $HOME/dotfiles/zsh/venv.sh
 source $ZSH/oh-my-zsh.sh
 source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
-source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+# Autosuggestions can be toggled with: autosuggestions_toggle, autosuggestions_on, or autosuggestions_off
+
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
