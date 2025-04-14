@@ -78,7 +78,7 @@ install_python() {
 
     echo "ℹ️  Building and installing Python $python_version..."
     cd "$temp_dir/Python-$python_version"
-    ./configure --prefix="$install_dir" && make && make install
+    ./configure  --with-openssl  --prefix="$install_dir" && make && make -j 64 install
     if [ $? -eq 0 ]; then
         echo "✅ Python $python_version installed at $install_dir"
         echo "ℹ️  Add $install_dir/bin to your PATH to use this Python version."
