@@ -147,3 +147,16 @@ function show_keybindings_help() {
 }
 zle -N show_keybindings_help
 bindkey "^h" show_keybindings_help
+
+
+# ------------------------------
+# Autosuggestions Toggle
+# ------------------------------
+
+# Toggle autosuggestions on
+function autosuggestions_toggle() {
+  BUFFER="autosuggestions_toggle"
+  zle accept-line
+}
+zle -N autosuggestions_toggle
+bindkey "^a" autosuggestions_toggle

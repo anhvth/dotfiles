@@ -303,23 +303,23 @@ update_dotfiles() {
 }
 
 # ZSH Autosuggestions toggle functions
-autosuggestions_on() {
-    source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-    echo "Autosuggestions turned ON"
-}
-
-autosuggestions_off() {
-    unfunction _zsh_autosuggest_start _zsh_autosuggest_bind_widgets _zsh_autosuggest_highlight_apply _zsh_autosuggest_highlight_reset _zsh_autosuggest_clear _zsh_autosuggest_fetch _zsh_autosuggest_suggest _zsh_autosuggest_accept _zsh_autosuggest_execute _zsh_autosuggest_partial_accept _zsh_autosuggest_dismiss _zsh_autosuggest_disable _zsh_autosuggest_enable _zsh_autosuggest_incr_bind_count _zsh_autosuggest_decr_bind_count _zsh_autosuggest_bind_widget 2>/dev/null
-    bindkey -r "${terminfo[kcuu1]}" "${terminfo[kcud1]}" "${terminfo[cuu1]}" "${terminfo[cud1]}" 2>/dev/null
-    unset ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE ZSH_AUTOSUGGEST_ORIGINAL_WIDGET_PREFIX ZSH_AUTOSUGGEST_STRATEGY ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE ZSH_AUTOSUGGEST_HISTORY_IGNORE ZSH_AUTOSUGGEST_COMPLETION_IGNORE ZSH_AUTOSUGGEST_USE_ASYNC ZSH_AUTOSUGGEST_MANUAL_REBIND ZSH_AUTOSUGGEST_CLEAR_WIDGETS ZSH_AUTOSUGGEST_ACCEPT_WIDGETS ZSH_AUTOSUGGEST_EXECUTE_WIDGETS ZSH_AUTOSUGGEST_PARTIAL_ACCEPT_WIDGETS ZSH_AUTOSUGGEST_IGNORE_WIDGETS 2>/dev/null
-    echo "Autosuggestions turned OFF"
-}
 
 autosuggestions_toggle() {
-    if typeset -f _zsh_autosuggest_start > /dev/null; then
-        autosuggestions_off
+    local target="$HOME/.zshrc"
+    local line="source \$HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    # if the line is not in target create one
+    if ! grep -q "$line" "$target"; then
+        echo "Line not found in $target, adding it now."
+        echo "$line" >> "$target"
+        return
+    fi
+    if grep -q "^[^#]*$line" "$target"; then
+        # Line is uncommented, comment it
+        sed -i "s|^\($line\)|#\1|" "$target"
+        echo "Autosuggestions turned OFF"
     else
-        autosuggestions_on
+        # Line is commented, uncomment it
+        sed -i "s|^#\($line\)|\1|" "$target"
+        echo "Autosuggestions turned ON"
     fi
 }
-
