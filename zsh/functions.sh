@@ -316,10 +316,8 @@ autosuggestions_toggle() {
     if grep -q "^[^#]*$line" "$target"; then
         # Line is uncommented, comment it
         sed -i "s|^\($line\)|#\1|" "$target"
-        echo "Autosuggestions turned OFF"
     else
         # Line is commented, uncomment it
         sed -i "s|^#\($line\)|\1|" "$target"
-        echo "Autosuggestions turned ON"
     fi
 }
