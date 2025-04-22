@@ -57,7 +57,6 @@ alias update-dotfiles='cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd'
 
 
 alias lsh="pytools-lsh.py"
-alias mpython="pytools-mpython.py"
 alias ipython_config="pytools-ipython_config.py"
 alias cat_projects="pytools-cat_projects.py"
 alias hf-down="pytools-hf-down.py"
