@@ -65,7 +65,7 @@ else
 fi
 
 # Source configuration files
-source $HOME/dotfiles/zsh/venv.sh
+
 source $ZSH/oh-my-zsh.sh
 source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
@@ -181,13 +181,11 @@ fi
 #------------------------------------------
 # Virtual Environment
 #------------------------------------------
-if [ -f "$VIRTUAL_ENV" ]; then
-    source $VIRTUAL_ENV
-fi
+# source $HOME/dotfiles/zsh/venv.sh
+# if [ -f "$VIRTUAL_ENV" ]; then
+#     source $VIRTUAL_ENV
+# fi
 
 
 # PS1 insert machine name
 PS1=$"cname|$PS1"
-
-
-
