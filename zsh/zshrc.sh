@@ -182,7 +182,7 @@ fi
 #------------------------------------------
 # Virtual Environment
 #------------------------------------------
-# source $HOME/dotfiles/zsh/venv.sh
+source $HOME/dotfiles/zsh/venv.sh
 # if [ -f "$VIRTUAL_ENV" ]; then
 #     source $VIRTUAL_ENV
 # fi
