@@ -23,3 +23,17 @@ tmux
 ```bash
 wget https://raw.githubusercontent.com/anhvth/dotfiles/main/tmux/tmux.conf -O ~/.tmux.conf
 ```
+
+
+### Codegen
+```
+wget "https://raw.githubusercontent.com/anhvth/dotfiles/refs/heads/main/copilot/code-gen.md" -O .codegen
+```
+Ctrol+, -> add this line below
+```json
+    "github.copilot.chat.codeGeneration.instructions": [
+        {
+            "file": ".codegen"
+        }
+    ],
+```
