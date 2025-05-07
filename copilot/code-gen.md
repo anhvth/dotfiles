@@ -75,7 +75,7 @@ Your output will be evaluated against them.
 
 * Raise **specific** exceptions; never use bare `except:`.
 * Preserve traceback with `from e` when re‑raising.
-* Log context (`logger.exception`) at point of failure – assume `logging.basicConfig(level=logging.INFO)`.
+* Log context (`logger.exception`) at point of failure – use **loguru** for logging.
 * Declare expected exceptions in the docstring’s *Raises* section.
 
 ---
