@@ -6,6 +6,7 @@ import argparse
 
 from pydantic import BaseModel
 from typing import List
+
 # from openai import OpenAI
 
 # client = OpenAI()
@@ -100,7 +101,7 @@ def print_file_contents(inputs, file_extensions=".py", sumarize=False):
             else:
                 f = get_text2print
             ff = lambda x: f(x)
-            texts = multi_thread(ff, file_paths, 32)
+            texts = multi_thread(ff, file_paths, workers=32)
             # texts = [get_text2print(file) for file in file_paths]
             text = "\n".join(texts)
             print(text)
