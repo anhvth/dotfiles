@@ -101,6 +101,13 @@ def print_file_contents(inputs, file_extensions=".py", sumarize=False):
             else:
                 f = get_text2print
             ff = lambda x: f(x)
+            print(file_paths[:3]+["..."]+file_paths[-3:])
+            # ignore where contain ".FOLDER"
+            ignore_keywords = [".venv", ".FOLDER", "__pycache__", ".git", ".mypy_cache"]
+            def ignore_file(file):
+                return not any(keyword in file for keyword in ignore_keywords)
+            
+            file_paths = [fp for fp in file_paths if ignore_file(fp)]
             texts = multi_thread(ff, file_paths, workers=32)
             # texts = [get_text2print(file) for file in file_paths]
             text = "\n".join(texts)
