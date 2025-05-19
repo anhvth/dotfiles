@@ -347,6 +347,8 @@ init_copilot_instruction(){
         echo "File $targetfile has been created."
     fi
 }
+
+
 test_proxy() {
   local PORT=$1
   local PROXY="http://127.0.0.1:$PORT"
@@ -358,5 +360,5 @@ test_proxy() {
   fi
 
   echo "Testing proxy on $PROXY ..."
-  curl -x "$PROXY" -s -o /dev/null -w "\nStatus: %{http_code}\n"
+  curl -x "$PROXY" -s -o /dev/null -w "\nStatus: %{http_code}\nUsed Proxy: %{proxy}\n" "$TEST_URL"
 }
