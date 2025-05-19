@@ -31,3 +31,9 @@ Directly go over the list and edit the code to fix the problems.
 
 ## Common problems when generated code to avoid:
 *Stick to these choices unless explicitly instructed otherwise.*
+
+---
+
+## Rules for Code Generation
+
+- Each line should less than 88 characters.

@@ -321,3 +321,29 @@ autosuggestions_toggle() {
         sed -i "s|^#\($line\)|\1|" "$target"
     fi
 }
+
+
+init_copilot_instruction(){
+    initfile=~/dotfiles/.github/copilot-instructions.md
+    targetdir='.github'
+    targetfile=$targetdir'/copilot-instructions.md'
+    if [ ! -d "$targetdir" ]; then
+        mkdir "$targetdir"
+    fi
+    if [ ! -f "$targetfile" ]; then
+        cp "$initfile" "$targetfile"
+    fi
+    if [ -f "$targetfile" ]; then
+        echo "File $targetfile already exists. Do you want to overwrite it? (y/n)"
+        read answer
+        if [ "$answer" = "y" ]; then
+            cp "$initfile" "$targetfile"
+            echo "File $targetfile has been overwritten."
+        else
+            echo "File $targetfile has not been overwritten."
+        fi
+    else
+        cp "$initfile" "$targetfile"
+        echo "File $targetfile has been created."
+    fi
+}
