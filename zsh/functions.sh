@@ -323,29 +323,22 @@ autosuggestions_toggle() {
 }
 
 
-init_copilot_instruction(){
-    initfile=~/dotfiles/.github/copilot-instructions.md
-    targetdir='.github'
-    targetfile=$targetdir'/copilot-instructions.md'
-    if [ ! -d "$targetdir" ]; then
-        mkdir "$targetdir"
+init_copilot_instruction() {
+    local initfile="$HOME/dotfiles/.github/copilot-instructions.md"
+    local targetdir=".github"
+    local targetfile="$targetdir/copilot-instructions.md"
+    echo "Copying $initfile to $targetfile"
+
+    # Check if the source file exists
+    if [ ! -f "$initfile" ]; then
+        echo "Source file $initfile does not exist."
+        return 1
     fi
-    if [ ! -f "$targetfile" ]; then
-        cp "$initfile" "$targetfile"
-    fi
-    if [ -f "$targetfile" ]; then
-        echo "File $targetfile already exists. Do you want to overwrite it? (y/n)"
-        read answer
-        if [ "$answer" = "y" ]; then
-            cp "$initfile" "$targetfile"
-            echo "File $targetfile has been overwritten."
-        else
-            echo "File $targetfile has not been overwritten."
-        fi
-    else
-        cp "$initfile" "$targetfile"
-        echo "File $targetfile has been created."
-    fi
+
+    # Ensure the target directory exists
+    mkdir -p "$targetdir"
+
+    cp "$initfile" "$targetfile"
 }
 
 
