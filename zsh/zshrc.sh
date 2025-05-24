@@ -201,7 +201,7 @@ source $HOME/dotfiles/zsh/venv.sh
 # if [ -f "$VIRTUAL_ENV" ]; then
 #     source $VIRTUAL_ENV
 # fi
-alias atv="conda activate"
+alias atv="auto_source"
 
 
 # PS1 insert machine name
