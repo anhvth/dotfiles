@@ -1,9 +1,9 @@
 ### VENV
 auto_source() {
     # Skip if already in a virtual environment
-    if [[ -n "$VIRTUAL_ENV" ]]; then
-        return 0
-    fi
+    # if [[ -n "$VIRTUAL_ENV" ]]; then
+    #     return 0
+    # fi
     
     local current_dir="$(pwd)"
     local search_dir="$current_dir"
