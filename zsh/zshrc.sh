@@ -71,15 +71,30 @@ source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
-source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+#== Auto suggess
+
+# unset zle_bracketed_paste
+# source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+# pasteinit() {
+#   zle autosuggest-disable
+# }
+
+# pastefinish() {
+#   zle autosuggest-enable
+# }
+
+#===
 source ~/dotfiles/zsh/alias.sh
 source ~/dotfiles/zsh/functions.sh
-
+source $HOME/dotfiles/zsh/venv.sh
 
 # Skip global compinit on Ubuntu
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 	skip_global_compinit=1
 fi
+
+
+
 
 #------------------------------------------
 # Plugin Setup
@@ -191,3 +206,4 @@ alias atv="conda activate"
 
 # PS1 insert machine name
 PS1=$"cname|$PS1"
+
