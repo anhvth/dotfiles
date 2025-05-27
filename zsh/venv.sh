@@ -26,8 +26,7 @@ auto_source() {
     return 1
 }
 
-alias conda=~/miniconda3/bin/conda
-alias py3=~/miniconda3/envs/py3/bin/python3.12
+alias py3=/opt/homebrew/opt/python@3.12/libexec/bin/python
 create_venv() {
     local prompt_name="$1"
     if [[ -n "$prompt_name" ]]; then
@@ -37,4 +36,3 @@ create_venv() {
     fi
     source .venv/bin/activate && pip install poetry uv
 }
-auto_source

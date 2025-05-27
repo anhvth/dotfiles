@@ -207,3 +207,4 @@ alias atv="auto_source"
 # PS1 insert machine name
 PS1=$"cname|$PS1"
 
+export PATH=$PATH:~/dotfiles/custom-tools
