@@ -71,17 +71,6 @@ source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
-#== Auto suggess
-
-# unset zle_bracketed_paste
-# source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-# pasteinit() {
-#   zle autosuggest-disable
-# }
-
-# pastefinish() {
-#   zle autosuggest-enable
-# }
 
 #===
 source ~/dotfiles/zsh/alias.sh
