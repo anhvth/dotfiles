@@ -26,13 +26,12 @@ auto_source() {
     return 1
 }
 
-alias py3=/opt/homebrew/opt/python@3.12/libexec/bin/python
 create_venv() {
     local prompt_name="$1"
     if [[ -n "$prompt_name" ]]; then
-        py3 -m venv .venv --prompt "$prompt_name"
+        python3 -m venv .venv --prompt "$prompt_name"
     else
-        py3 -m venv .venv
+        python3 -m venv .venv
     fi
     source .venv/bin/activate && pip install poetry uv
 }
