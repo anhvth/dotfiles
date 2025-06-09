@@ -7,6 +7,7 @@ It can be used across different projects by updating the YAML configuration.
 """
 
 import argparse
+import json
 import subprocess
 import sys
 import time
@@ -66,6 +67,26 @@ class MutagenManager:
 
         self._log(f"Loaded configuration for project: {self.config['name']}")
 
+    def _add_to_gitignore(self, entry: str) -> None:
+        """Add entry to .gitignore if not already present"""
+        gitignore_path = Path.cwd() / ".gitignore"
+        existing_content = ""
+
+        # Check if entry already exists
+        if gitignore_path.exists():
+            with open(gitignore_path, "r") as f:
+                existing_content = f.read()
+                if entry in existing_content:
+                    return
+
+        # Append entry to .gitignore
+        with open(gitignore_path, "a") as f:
+            if gitignore_path.exists() and not existing_content.endswith("\n"):
+                f.write("\n")
+            f.write(f"{entry}\n")
+
+        self._log(f"✓ Added '{entry}' to .gitignore")
+
     def init_project(self) -> None:
         """Initialize project by copying template configuration"""
         target_file = Path.cwd() / "mutagen.yml"
@@ -82,15 +103,68 @@ class MutagenManager:
             sys.exit(1)
 
         try:
-            shutil.copy2(self.template_path, target_file)
-            self._log(f"✓ Template copied to {target_file}")
-            self._log("Please edit the configuration file to set:")
-            print("  - PROJECT_NAME: Your project name")
-            print("  - LOCAL_PATH: Local project directory")
-            print("  - REMOTE_SSH_HOST: SSH host alias or hostname")
-            print("  - REMOTE_PATH: Remote project directory")
+            # Read template content
+            with open(self.template_path, "r") as f:
+                template_content = f.read()
+
+            # Interactive configuration
+            self._log("Setting up project configuration...")
+            print("Press Enter to keep default values in brackets")
+            print()
+
+            # Get current directory name as default project name
+            default_project = Path.cwd().name
+            project_name = input(f"Project name [{default_project}]: ").strip()
+            if not project_name:
+                project_name = default_project
+
+            # Get current directory as default local path
+            default_local = str(Path.cwd())
+            local_path = input(f"Local project path [{default_local}]: ").strip()
+            if not local_path:
+                local_path = default_local
+
+            # SSH host
+            remote_host = input("Remote SSH host: ").strip()
+            while not remote_host:
+                self._warn("Remote SSH host is required")
+                remote_host = input("Remote SSH host: ").strip()
+
+            # Remote path with intelligent default
+            default_remote = f"/home/{Path.home().name}/projects/{project_name}"
+            remote_path = input(f"Remote project path [{default_remote}]: ").strip()
+            if not remote_path:
+                remote_path = default_remote
+
+            # Replace placeholders in template
+            configured_content = template_content.replace("PROJECT_NAME", project_name)
+            configured_content = configured_content.replace("LOCAL_PATH", local_path)
+            configured_content = configured_content.replace(
+                "REMOTE_SSH_HOST", remote_host
+            )
+            configured_content = configured_content.replace("REMOTE_PATH", remote_path)
+
+            # Write configured file
+            with open(target_file, "w") as f:
+                f.write(configured_content)
+
+            # Add mutagen.yml to .gitignore
+            self._add_to_gitignore("mutagen.yml")
+
+            # Update VS Code settings for SSH terminal
+            self._update_vscode_settings(remote_host, remote_path)
+
+            self._log(f"✓ Configuration created: {target_file}")
+            self._log("Configuration summary:")
+            print(f"  Project: {project_name}")
+            print(f"  Local:   {local_path}")
+            print(f"  Remote:  {remote_host}:{remote_path}")
+            print()
+            self._log("✓ VS Code terminal configured for SSH connection")
+            self._log("You can now run 'mtg start' to begin syncing")
+
         except Exception as e:
-            self._error(f"Failed to copy template: {e}")
+            self._error(f"Failed to create configuration: {e}")
             sys.exit(1)
 
     def _log(self, message: str) -> None:
@@ -295,6 +369,11 @@ class MutagenManager:
         if jupyter_port:
             self._log(f"  Access Jupyter at: http://localhost:{jupyter_port}")
 
+        # Update VS Code settings for SSH terminal
+        self._update_vscode_settings(
+            f"{self.config['remoteHost']}", f"{self.config['remotePath']}"
+        )
+
     def stop_session(self) -> None:
         """Stop Mutagen session and forwarding"""
         self._warn(f"Stopping {self.config['sessionName']} session and forwarding...")
@@ -421,6 +500,100 @@ class MutagenManager:
         self.stop_session()
         time.sleep(2)
         self.start_session()
+
+    def _update_vscode_settings(self, remote_host: str, remote_path: str) -> None:
+        """Update VS Code settings to configure SSH terminal profile"""
+        vscode_dir = Path.cwd() / ".vscode"
+        settings_file = vscode_dir / "settings.json"
+
+        # Create .vscode directory if it doesn't exist
+        vscode_dir.mkdir(exist_ok=True)
+
+        # Terminal profile configuration
+        ssh_profile_name = f"SSH to {remote_host}"
+        terminal_config = {
+            "terminal.integrated.defaultProfile.osx": ssh_profile_name,
+            "terminal.integrated.profiles.osx": {
+                ssh_profile_name: {
+                    "path": "ssh",
+                    "args": [
+                        remote_host,
+                        "-t",
+                        f"cd '{remote_path}' && exec $SHELL -l",
+                    ],
+                    "icon": "server-environment",
+                },
+                "zsh": {"path": "zsh", "args": ["-l"]},
+            },
+        }
+
+        try:
+            existing_settings = {}
+
+            # Read existing settings if file exists
+            if settings_file.exists():
+                with open(settings_file, "r") as f:
+                    content = f.read()
+
+                # Remove comments and trailing commas for parsing
+                import re
+
+                # Remove single-line comments
+                content_no_comments = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
+                # Remove multi-line comments
+                content_no_comments = re.sub(
+                    r"/\*.*?\*/", "", content_no_comments, flags=re.DOTALL
+                )
+                # Remove trailing commas before } or ]
+                content_no_comments = re.sub(r",(\s*[}\]])", r"\1", content_no_comments)
+
+                if content_no_comments.strip():
+                    try:
+                        existing_settings = json.loads(content_no_comments)
+                    except json.JSONDecodeError:
+                        self._warn(
+                            "Could not parse existing settings.json, will create backup"
+                        )
+                        # Create backup
+                        backup_file = settings_file.with_suffix(".json.backup")
+                        shutil.copy2(settings_file, backup_file)
+                        self._log(f"Backup created: {backup_file}")
+
+            # Merge terminal configuration
+            existing_settings.update(terminal_config)
+
+            # Write updated settings with proper formatting
+            with open(settings_file, "w") as f:
+                f.write("{\n")
+
+                # Write each setting with proper indentation
+                settings_items = list(existing_settings.items())
+                for i, (key, value) in enumerate(settings_items):
+                    # Add comment for terminal settings
+                    if key.startswith("terminal.integrated"):
+                        if key == "terminal.integrated.defaultProfile.osx":
+                            f.write(f"    // Default terminal profile for SSH\n")
+                        elif key == "terminal.integrated.profiles.osx":
+                            f.write(f"    // Terminal profiles configuration\n")
+
+                    # Write the setting
+                    json_value = json.dumps(value, indent=4)
+                    # Adjust indentation for nested objects
+                    indented_value = json_value.replace("\n", "\n    ")
+                    f.write(f'    "{key}": {indented_value}')
+
+                    # Add comma if not last item
+                    if i < len(settings_items) - 1:
+                        f.write(",")
+                    f.write("\n")
+
+                f.write("}")
+
+            self._log(f"✓ Updated VS Code settings: {settings_file}")
+            self._log(f"  Default terminal: SSH to {remote_host}")
+
+        except Exception as e:
+            self._error(f"Failed to update VS Code settings: {e}")
 
 
 def main():
