@@ -1,0 +1,74 @@
+# Project-specific configuration
+project:
+  name: "PROJECT_NAME"
+  sessionName: "PROJECT_NAME-dev"
+  forwardName: "PROJECT_NAME-ports"
+  localPath: "LOCAL_PATH"
+  remoteHost: "REMOTE_SSH_HOST"
+  remotePath: "REMOTE_PATH"
+  # ports:
+  #   jupyter: 8888
+  #   dev: 8080
+  #   tensorboard: 6006
+
+sync:
+
+  PROJECT_NAME-dev:
+    # Paths are now defined in project section above for script usage
+    alpha: "LOCAL_PATH"
+    beta: "REMOTE_SSH_HOST:REMOTE_PATH"
+    
+    configurationBeta:
+      maxStagingFileSize: "2 MB"
+      # forwardingPorts:
+      #   - "8888:localhost:8888"  # Jupyter
+      #   - "8080:localhost:8080"  # Development server
+      #   - "6006:localhost:6006"  # TensorBoard
+      
+      ssh:
+        agent: true
+        serverAliveInterval: 30
+        serverAliveCountMax: 3
+        compression: true
+    
+    ignore:
+      vcs: true
+      paths:
+        - "wandb/"
+        - "build/"
+        - "dist/"
+        - ".env*"
+        - "*.pkl"
+        - "*.pth"
+        - "*.pt"
+        - "*.h5"
+        - "*.hdf5"
+        - "*.npz"
+        - "*.npy"
+        - "*.zip"
+        - "*.tar.gz"
+        - "*.mp4"
+        - "*.avi"
+        - "*.mov"
+        - "*.mkv"
+        - "*.jpg"
+        - "*.jpeg"
+        - "*.png"
+        - "*.gif"
+        - "*.bmp"
+        - "*.tiff"
+        - "*.pdf"
+        - "*.iso"
+        - "*.dmg"
+        - "*.exe"
+        - "*.msi"
+        - "*.deb"
+        - "*.rpm"
+        - "checkpoints/"
+        - "logs/"
+        - "outputs/"
+        - "data/"
+        - "__pycache__/"
+        - "*.egg-info/"
+        - ".pytest_cache/"
+        - ".coverage"
