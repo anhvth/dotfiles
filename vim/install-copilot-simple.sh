@@ -1,16 +1,21 @@
 #!/bin/bash
-# Vim/Neovim setup script
+# Simple GitHub Copilot installer function
+# Can be sourced or copied into other setup scripts
 
-# sudo apt-get update && install curl
-curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \
-    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-
-#nvim + PlugInstall
-nvim +'PlugInstall --sync' +qa
-
-# Setup GitHub Copilot
-echo "🤖 Setting up GitHub Copilot..."
 setup_github_copilot() {
+    echo "🤖 Setting up GitHub Copilot for Vim/Neovim..."
+    
+    # Check Node.js
+    if ! command -v node >/dev/null 2>&1; then
+        echo "❌ Node.js not found. Installing via brew..."
+        if command -v brew >/dev/null 2>&1; then
+            brew install node
+        else
+            echo "❌ Please install Node.js 18+ manually"
+            return 1
+        fi
+    fi
+    
     # Install for Vim if present
     if command -v vim >/dev/null 2>&1; then
         echo "📝 Installing Copilot for Vim..."
@@ -33,5 +38,7 @@ setup_github_copilot() {
     echo "📋 Next: Open vim/nvim and run ':Copilot setup'"
 }
 
-setup_github_copilot
-
+# Run if script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    setup_github_copilot
+fi
