@@ -32,6 +32,60 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Update Node.js to latest version
+update_nodejs() {
+    local os=$(detect_os)
+    
+    print_status "Installing/updating Node.js to latest version (v22.x)..."
+    
+    case $os in
+        "macos")
+            if has_brew; then
+                print_status "Using Homebrew to update Node.js..."
+                brew update
+                if brew list node &>/dev/null; then
+                    brew upgrade node
+                else
+                    brew install node
+                fi
+                print_success "Node.js updated via Homebrew"
+            else
+                print_warning "Homebrew not found. Please install Homebrew or update Node.js manually"
+                return 1
+            fi
+            ;;
+        "linux")
+            if has_apt; then
+                print_status "Using NodeSource repository to install Node.js v22.x..."
+                # Remove current Node.js repo (optional but recommended)
+                sudo rm -f /etc/apt/sources.list.d/nodesource.list
+                
+                # Add the latest Node.js (v22.x) repo
+                curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+                
+                # Install Node.js
+                sudo apt-get install -y nodejs
+                print_success "Node.js v22.x installed via NodeSource"
+            elif has_yum_dnf; then
+                print_status "Installing Node.js via package manager..."
+                if command_exists dnf; then
+                    sudo dnf install -y nodejs npm
+                else
+                    sudo yum install -y nodejs npm
+                fi
+                print_success "Node.js installed via yum/dnf"
+            else
+                print_warning "No supported package manager found. Please install Node.js manually"
+                return 1
+            fi
+            ;;
+        *)
+            print_warning "Unsupported OS. Please install Node.js manually"
+            return 1
+            ;;
+    esac
+}
+
 # Check Node.js version
 check_nodejs() {
     if command_exists node; then
@@ -39,14 +93,41 @@ check_nodejs() {
         local major_version=$(echo $node_version | cut -d. -f1)
         if [ "$major_version" -ge 18 ]; then
             print_success "Node.js $node_version found (required: >=18)"
+            
+            # Ask user if they want to update to latest
+            echo ""
+            read -p "Do you want to update Node.js to the latest version (v22.x)? (y/N): " update_choice
+            if [[ "$update_choice" =~ ^[Yy]$ ]]; then
+                update_nodejs
+                # Re-check version after update
+                if command_exists node; then
+                    local new_version=$(node --version | sed 's/v//')
+                    print_success "Node.js updated to version $new_version"
+                fi
+            fi
             return 0
         else
             print_error "Node.js version $node_version found, but version 18 or higher is required"
-            return 1
+            echo ""
+            read -p "Do you want to update Node.js to the latest version (v22.x)? (y/N): " update_choice
+            if [[ "$update_choice" =~ ^[Yy]$ ]]; then
+                update_nodejs
+                return 0
+            else
+                return 1
+            fi
         fi
     else
-        print_error "Node.js not found. Please install Node.js 18 or higher"
-        return 1
+        print_error "Node.js not found"
+        echo ""
+        read -p "Do you want to install Node.js (v22.x)? (y/N): " install_choice
+        if [[ "$install_choice" =~ ^[Yy]$ ]]; then
+            update_nodejs
+            return 0
+        else
+            print_error "Please install Node.js 18 or higher"
+            return 1
+        fi
     fi
 }
 
@@ -62,15 +143,109 @@ check_vim() {
     fi
 }
 
+# Detect operating system
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macos"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        echo "linux"
+    else
+        echo "unknown"
+    fi
+}
+
+# Check if Homebrew is available (macOS)
+has_brew() {
+    command_exists brew
+}
+
+# Check if apt is available (Ubuntu/Debian)
+has_apt() {
+    command_exists apt
+}
+
+# Check if yum/dnf is available (RHEL/CentOS/Fedora)
+has_yum_dnf() {
+    command_exists yum || command_exists dnf
+}
+
+# Update Neovim to latest version
+update_neovim() {
+    local os=$(detect_os)
+    
+    print_status "Updating Neovim to latest version..."
+    
+    case $os in
+        "macos")
+            if has_brew; then
+                print_status "Using Homebrew to update Neovim..."
+                brew update
+                if brew list neovim &>/dev/null; then
+                    brew upgrade neovim
+                else
+                    brew install neovim
+                fi
+                print_success "Neovim updated via Homebrew"
+            else
+                print_warning "Homebrew not found. Please install Homebrew or update Neovim manually"
+                return 1
+            fi
+            ;;
+        "linux")
+            if has_apt; then
+                print_status "Using apt to update Neovim..."
+                sudo apt update
+                sudo apt install -y neovim
+                print_success "Neovim updated via apt"
+            elif has_yum_dnf; then
+                if command_exists dnf; then
+                    print_status "Using dnf to update Neovim..."
+                    sudo dnf install -y neovim
+                else
+                    print_status "Using yum to update Neovim..."
+                    sudo yum install -y neovim
+                fi
+                print_success "Neovim updated via yum/dnf"
+            else
+                print_warning "No supported package manager found. Please update Neovim manually"
+                return 1
+            fi
+            ;;
+        *)
+            print_warning "Unsupported OS. Please update Neovim manually"
+            return 1
+            ;;
+    esac
+}
+
 # Check Neovim version
 check_neovim() {
     if command_exists nvim; then
         local nvim_version=$(nvim --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
         print_success "Neovim $nvim_version found"
+        
+        # Ask user if they want to update
+        echo ""
+        read -p "Do you want to update Neovim to the latest version? (y/N): " update_choice
+        if [[ "$update_choice" =~ ^[Yy]$ ]]; then
+            update_neovim
+            # Re-check version after update
+            if command_exists nvim; then
+                local new_version=$(nvim --version | head -n1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+                print_success "Neovim updated to version $new_version"
+            fi
+        fi
         return 0
     else
         print_warning "Neovim not found"
-        return 1
+        echo ""
+        read -p "Do you want to install Neovim? (y/N): " install_choice
+        if [[ "$install_choice" =~ ^[Yy]$ ]]; then
+            update_neovim
+            return 0
+        else
+            return 1
+        fi
     fi
 }
 
