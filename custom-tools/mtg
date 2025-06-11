@@ -1,0 +1,766 @@
+#!/usr/bin/env python3
+"""
+Generic Mutagen management script
+
+This script reads configuration from mutagen.yml in the project section.
+It can be used across different projects by updating the YAML configuration.
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Dict, List, Optional
+import shutil
+
+try:
+    import yaml
+except ImportError:
+    print("PyYAML is required. Install with: pip install PyYAML")
+    sys.exit(1)
+
+
+class Colors:
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    NC = "\033[0m"
+
+
+class MutagenManager:
+    def __init__(self, config_file: str = "mutagen.yml"):
+        self.config_file = Path(config_file)
+        self.config = {}
+        self.template_path = (
+            Path(__file__).parent.parent / "asssets" / "mtg-template.yml"
+        )
+
+    def _load_config(self) -> None:
+        """Load configuration from YAML file"""
+        if not self.config_file.exists():
+            self._error(f"Configuration file {self.config_file} not found")
+            sys.exit(1)
+
+        try:
+            with open(self.config_file, "r") as f:
+                data = yaml.safe_load(f)
+                self.config = data.get("project", {})
+        except yaml.YAMLError as e:
+            self._error(f"Error parsing YAML: {e}")
+            sys.exit(1)
+
+        # Validate required configuration
+        required_fields = [
+            "name",
+            "sessionName",
+            "localPath",
+            "remoteHost",
+            "remotePath",
+        ]
+        missing = [field for field in required_fields if not self.config.get(field)]
+
+        if missing:
+            self._error(f"Missing required configuration: {', '.join(missing)}")
+            sys.exit(1)
+
+        self._log(f"Loaded configuration for project: {self.config['name']}")
+
+    def _add_to_gitignore(self, entry: str) -> None:
+        """Add entry to .gitignore if not already present"""
+        gitignore_path = Path.cwd() / ".gitignore"
+        existing_content = ""
+
+        # Check if entry already exists
+        if gitignore_path.exists():
+            with open(gitignore_path, "r") as f:
+                existing_content = f.read()
+                if entry in existing_content:
+                    return
+
+        # Append entry to .gitignore
+        with open(gitignore_path, "a") as f:
+            if gitignore_path.exists() and not existing_content.endswith("\n"):
+                f.write("\n")
+            f.write(f"{entry}\n")
+
+        self._log(f"✓ Added '{entry}' to .gitignore")
+
+    def _parse_ports(self, ports_input: str) -> List[int]:
+        """Parse port input supporting both individual ports and ranges.
+
+        Args:
+            ports_input: Comma-separated port specification (e.g., "8888,8000-8005")
+
+        Returns:
+            List of individual port numbers
+
+        Raises:
+            ValueError: If port format is invalid
+        """
+        if "-" in ports_input:
+            start, end = ports_input.split("-", 1)
+
+            return list(range(int(start.strip()), int(end.strip()) + 1))
+        ports = []
+        for item in ports_input.split(","):
+            item = item.strip()
+            if not item:
+                continue
+
+            if "-" in item:
+                # Handle port range (e.g., "8000-8005")
+                try:
+                    start_str, end_str = item.split("-", 1)
+                    start_port = int(start_str.strip())
+                    end_port = int(end_str.strip())
+
+                    if start_port > end_port:
+                        raise ValueError(
+                            f"Invalid range {item}: start port must be <= end port"
+                        )
+                    if start_port < 1 or end_port > 65535:
+                        raise ValueError(
+                            f"Invalid range {item}: ports must be between 1-65535"
+                        )
+                    if end_port - start_port > 100:
+                        raise ValueError(
+                            f"Range {item} too large (max 100 ports per range)"
+                        )
+
+                    ports.extend(range(start_port, end_port + 1))
+                except ValueError as e:
+                    if "invalid literal" in str(e):
+                        raise ValueError(f"Invalid port range format: {item}")
+                    raise
+            else:
+                # Handle individual port
+                try:
+                    port = int(item)
+                    if port < 1 or port > 65535:
+                        raise ValueError(
+                            f"Invalid port {port}: must be between 1-65535"
+                        )
+                    ports.append(port)
+                except ValueError as e:
+                    if "invalid literal" in str(e):
+                        raise ValueError(f"Invalid port number: {item}")
+                    raise
+
+        return ports
+
+    def init_project(self) -> None:
+        """Initialize project by copying template configuration"""
+        target_file = Path.cwd() / "mutagen.yml"
+
+        if target_file.exists():
+            self._warn(f"Configuration file {target_file} already exists")
+            response = input("Overwrite? (y/N): ").strip().lower()
+            if response != "y":
+                self._log("Init cancelled")
+                return
+
+        if not self.template_path.exists():
+            self._error(f"Template file not found: {self.template_path}")
+            sys.exit(1)
+
+        try:
+            # Read template content
+            with open(self.template_path, "r") as f:
+                template_content = f.read()
+
+            # Interactive configuration
+            self._log("Setting up project configuration...")
+            print("Press Enter to keep default values in brackets")
+            print()
+
+            # Get current directory name as default project name
+            default_project = Path.cwd().name
+            project_name = input(f"Project name [{default_project}]: ").strip()
+            if not project_name:
+                project_name = default_project
+
+            # Get current directory as default local path
+            default_local = str(Path.cwd())
+            local_path = input(f"Local project path [{default_local}]: ").strip()
+            if not local_path:
+                local_path = default_local
+
+            # SSH host
+            remote_host = input("Remote SSH host: ").strip()
+            while not remote_host:
+                self._warn("Remote SSH host is required")
+                remote_host = input("Remote SSH host: ").strip()
+
+            # Remote path with intelligent default
+            default_remote = (
+                local_path  # f"/home/{Path.home().name}/projects/{project_name}"
+            )
+            remote_path = input(f"Remote project path [{default_remote}]: ").strip()
+            if not remote_path:
+                remote_path = default_remote
+
+            # Ports configuration
+            ports_input = input(
+                "Port forwarding (comma-separated, ranges supported, e.g., 8888,8889,8000-8005 or Enter for none): "
+            ).strip()
+
+            # Parse and configure ports
+            port_config = ""
+            if ports_input:
+                try:
+                    ports = self._parse_ports(ports_input)
+                    if ports:
+                        port_config = "\nports:\n"
+                        for i, port in enumerate(ports):
+                            forward_name = f"port{port}"
+                            port_config += f"    {forward_name}: {port}\n"
+                            print("Port forwarding configured:", forward_name, port)
+                            # if i == 0:
+                            #     # First port becomes the default jupyter port
+                            #     port_config += f"  jupyter: {port}\n"
+                            #     port_config += f"\nforwardName: {forward_name}\n"
+                            # else:
+                            #     # Additional ports can be added later
+                            #     port_config += f"  # Additional port: {port}\n"
+                except ValueError as e:
+                    self._warn(f"Invalid port format: {e}, skipping port configuration")
+                    port_config = ""
+
+            # Replace placeholders in template
+            configured_content = template_content.replace("PROJECT_NAME", project_name)
+            configured_content = configured_content.replace("LOCAL_PATH", local_path)
+            configured_content = configured_content.replace(
+                "REMOTE_SSH_HOST", remote_host
+            )
+            configured_content = configured_content.replace("REMOTE_PATH", remote_path)
+
+            # Add port configuration if provided
+            if port_config:
+                assert (
+                    "# Add port configuration here" in configured_content
+                ), "Template must contain '# Add port configuration here' placeholder"
+                configured_content = configured_content.replace(
+                    "# Add port configuration here", port_config.strip()
+                )
+
+            # Write configured file
+            with open(target_file, "w") as f:
+                f.write(configured_content)
+
+            # Add mutagen.yml to .gitignore
+            self._add_to_gitignore("mutagen.yml")
+
+            # Update VS Code settings for SSH terminal
+            self._update_vscode_settings(remote_host, remote_path)
+
+            self._log(f"✓ Configuration created: {target_file}")
+            self._log("Configuration summary:")
+            print(f"  Project: {project_name}")
+            print(f"  Local:   {local_path}")
+            print(f"  Remote:  {remote_host}:{remote_path}")
+            if ports_input:
+                print(f"  Ports:   {ports_input}")
+            print()
+            self._log("✓ VS Code terminal configured for SSH connection")
+            self._log("You can now run 'mtg start' to begin syncing")
+
+        except Exception as e:
+            self._error(f"Failed to create configuration: {e}")
+            sys.exit(1)
+
+    def _log(self, message: str) -> None:
+        """Print success message in green"""
+        print(f"{Colors.GREEN}{message}{Colors.NC}")
+
+    def _warn(self, message: str) -> None:
+        """Print warning message in yellow"""
+        print(f"{Colors.YELLOW}{message}{Colors.NC}")
+
+    def _error(self, message: str) -> None:
+        """Print error message in red"""
+        print(f"{Colors.RED}{message}{Colors.NC}", file=sys.stderr)
+
+    def _run_command(
+        self, cmd: List[str], capture_output: bool = True
+    ) -> subprocess.CompletedProcess:
+        """Run a command and return the result"""
+        try:
+            return subprocess.run(
+                cmd, capture_output=capture_output, text=True, check=False
+            )
+        except FileNotFoundError:
+            self._error(f"Command not found: {cmd[0]}")
+            sys.exit(1)
+
+    def _check_prerequisites(self) -> None:
+        """Check if required tools are installed"""
+        # Check if mutagen is installed
+        result = self._run_command(["mutagen", "--version"])
+        if result.returncode != 0:
+            self._error(
+                "Mutagen not installed. See: https://mutagen.io/documentation/introduction/installation"
+            )
+            sys.exit(1)
+
+        # Check for .gitignore
+        if not Path(".gitignore").exists():
+            self._warn(".gitignore not found. Will use basic ignore patterns.")
+
+    def test_ssh_connection(self) -> bool:
+        """Test SSH connection to remote host"""
+        remote_host = self.config["remoteHost"]
+        remote_path = self.config["remotePath"]
+
+        self._log(f"Testing SSH connection to {remote_host}...")
+
+        cmd = [
+            "ssh",
+            "-o",
+            "ConnectTimeout=5",
+            "-o",
+            "BatchMode=yes",
+            remote_host,
+            f"mkdir -p '{remote_path}'",
+        ]
+
+        result = self._run_command(cmd)
+        if result.returncode == 0:
+            self._log("✓ SSH connection successful and remote directory ready")
+            return True
+        else:
+            self._warn("SSH connection failed. Check SSH keys and host configuration.")
+            return False
+
+    def _get_session_id(self) -> Optional[str]:
+        """Get the session ID for the current project"""
+        session_name = self.config["sessionName"]
+        result = self._run_command(["mutagen", "sync", "list"])
+
+        if result.returncode != 0:
+            return None
+
+        lines = result.stdout.split("\n")
+        for i, line in enumerate(lines):
+            if f"Name: {session_name}" in line and i + 1 < len(lines):
+                session_line = lines[i + 1].strip()
+                if session_line.startswith("Identifier:"):
+                    return session_line.split()[1]
+        return None
+
+    def _get_forward_id(self) -> Optional[str]:
+        """Get the forward ID for the current project"""
+        forward_name = self.config.get("forwardName", "")
+        if not forward_name:
+            return None
+
+        result = self._run_command(["mutagen", "forward", "list"])
+
+        if result.returncode != 0:
+            return None
+
+        lines = result.stdout.split("\n")
+        for i, line in enumerate(lines):
+            if f"Name: {forward_name}" in line and i + 1 < len(lines):
+                forward_line = lines[i + 1].strip()
+                if forward_line.startswith("Identifier:"):
+                    return forward_line.split()[1]
+        return None
+
+    def _session_exists(self) -> bool:
+        """Check if sync session exists"""
+        return self._get_session_id() is not None
+
+    def _forward_exists(self) -> bool:
+        """Check if port forwarding exists"""
+        return self._get_forward_id() is not None
+
+    def _build_ignore_patterns(self) -> List[str]:
+        """Build ignore patterns for mutagen"""
+        ignore_args = ["--ignore-vcs"]
+
+        # Add additional mutagen-specific patterns
+        patterns = [
+            ".DS_Store",
+            "Thumbs.db",
+            "*.pt",
+            "*.pth",
+            "*.ckpt",
+            "*.safetensors",
+            "*.key",
+            "*.pem",
+        ]
+
+        for pattern in patterns:
+            ignore_args.extend(["--ignore", pattern])
+
+        return ignore_args
+
+    def start_session(self) -> None:
+        """Start Mutagen session with port forwarding"""
+        self._log(f"Starting {self.config['sessionName']} session...")
+
+        if not self.test_ssh_connection():
+            self._error("Cannot proceed without SSH connectivity")
+            sys.exit(1)
+
+        # Start sync session
+        if self._session_exists():
+            self._warn(f"{self.config['sessionName']} sync session already exists")
+        else:
+            self._log("Creating sync session with .gitignore patterns...")
+
+            ignore_patterns = self._build_ignore_patterns()
+
+            cmd = (
+                [
+                    "mutagen",
+                    "sync",
+                    "create",
+                    "--name",
+                    self.config["sessionName"],
+                    "--mode",
+                    "two-way-resolved",
+                ]
+                + ignore_patterns
+                + [
+                    self.config["localPath"],
+                    f"{self.config['remoteHost']}:{self.config['remotePath']}",
+                ]
+            )
+
+            result = self._run_command(cmd, capture_output=False)
+            if result.returncode == 0:
+                self._log(
+                    "✓ Sync session created with automatic .gitignore integration"
+                )
+            else:
+                self._error("Failed to create sync session")
+                return
+
+        # Start port forwarding
+        forward_name = self.config.get("forwardName")
+        jupyter_port = self.config.get("ports", {}).get("jupyter")
+
+        if forward_name and jupyter_port:
+            if self._forward_exists():
+                self._warn(f"{forward_name} forwarding already exists")
+            else:
+                self._log("Creating port forwarding for Jupyter...")
+
+                cmd = [
+                    "mutagen",
+                    "forward",
+                    "create",
+                    "--name",
+                    forward_name,
+                    f"tcp:localhost:{jupyter_port}",
+                    f"{self.config['remoteHost']}:tcp:localhost:{jupyter_port}",
+                ]
+
+                result = self._run_command(cmd, capture_output=False)
+                if result.returncode == 0:
+                    self._log(
+                        f"✓ Port forwarding created (localhost:{jupyter_port} → remote:{jupyter_port})"
+                    )
+                else:
+                    self._error("Failed to create port forwarding")
+                    return
+
+        self._log("✓ Session and forwarding started successfully")
+        if jupyter_port:
+            self._log(f"  Access Jupyter at: http://localhost:{jupyter_port}")
+
+        # Update VS Code settings for SSH terminal
+        self._update_vscode_settings(
+            f"{self.config['remoteHost']}", f"{self.config['remotePath']}"
+        )
+
+    def stop_session(self) -> None:
+        """Stop Mutagen session and forwarding"""
+        self._warn(f"Stopping {self.config['sessionName']} session and forwarding...")
+
+        # Stop forwarding
+        forward_id = self._get_forward_id()
+        if forward_id:
+            result = self._run_command(["mutagen", "forward", "terminate", forward_id])
+            if result.returncode == 0:
+                self._log("✓ Port forwarding stopped")
+
+        # Stop sync
+        session_id = self._get_session_id()
+        if session_id:
+            result = self._run_command(["mutagen", "sync", "terminate", session_id])
+            if result.returncode == 0:
+                self._log("✓ Sync session stopped")
+
+        if not session_id and not forward_id:
+            self._warn("No active sessions or forwarding found")
+
+    def show_status(self) -> None:
+        """Show session and forwarding status"""
+        self._log("Session and forwarding status:")
+        print()
+
+        # Show sync status
+        if self._session_exists():
+            print("📁 Sync Session:")
+            result = self._run_command(
+                ["mutagen", "sync", "list"], capture_output=False
+            )
+            self._log(f"✓ {self.config['sessionName']} sync is active")
+        else:
+            self._warn(f"❌ No {self.config['sessionName']} sync session found")
+
+        print()
+
+        # Show forwarding status
+        if self._forward_exists():
+            print("🔗 Port Forwarding:")
+            result = self._run_command(
+                ["mutagen", "forward", "list"], capture_output=False
+            )
+            jupyter_port = self.config.get("ports", {}).get("jupyter")
+            if jupyter_port:
+                self._log(
+                    f"✓ Port forwarding active (localhost:{jupyter_port} → remote:{jupyter_port})"
+                )
+        else:
+            self._warn("❌ No port forwarding found")
+
+        if not self._session_exists() or not self._forward_exists():
+            print()
+            self._warn("Run 'python mutagen.py start' to create missing components")
+
+    def show_logs(self) -> None:
+        """Show sync logs"""
+        session_id = self._get_session_id()
+
+        if session_id:
+            self._log(f"Recent sync activity for {self.config['sessionName']}:")
+            self._run_command(["mutagen", "sync", "list"], capture_output=False)
+        else:
+            self._warn("No active session found")
+
+    def monitor_session(self) -> None:
+        """Monitor sync session in real-time"""
+        session_id = self._get_session_id()
+
+        if session_id:
+            self._log(
+                f"Monitoring {self.config['sessionName']} (Press Ctrl+C to stop)..."
+            )
+            try:
+                self._run_command(
+                    ["mutagen", "sync", "monitor", session_id], capture_output=False
+                )
+            except KeyboardInterrupt:
+                self._log("\nMonitoring stopped")
+        else:
+            self._warn("No active session to monitor")
+
+    def handle_conflicts(self) -> None:
+        """Handle sync conflicts"""
+        session_id = self._get_session_id()
+
+        if not session_id:
+            self._warn("No active session found")
+            return
+
+        self._log(f"Checking conflicts for {self.config['sessionName']}...")
+
+        result = self._run_command(["mutagen", "sync", "list"])
+        if result.returncode == 0:
+            # Parse conflict count from output
+            lines = result.stdout.split("\n")
+            conflict_count = 0
+            for line in lines:
+                if "Conflicts:" in line:
+                    try:
+                        conflict_count = int(line.split("Conflicts:")[1].strip())
+                        break
+                    except (ValueError, IndexError):
+                        pass
+
+            if conflict_count == 0:
+                self._log("✓ No conflicts found")
+            else:
+                self._error(f"⚠ Found {conflict_count} conflict(s)")
+                print()
+                self._warn("Resolution options:")
+                print(
+                    f"1. Force local → remote: mutagen sync flush --alpha-to-beta {session_id}"
+                )
+                print(
+                    f"2. Force remote → local: mutagen sync flush --beta-to-alpha {session_id}"
+                )
+                print("3. Restart session: python mutagen.py restart")
+
+    def restart_session(self) -> None:
+        """Restart session"""
+        self._warn("Restarting session...")
+        self.stop_session()
+        time.sleep(2)
+        self.start_session()
+
+    def _update_vscode_settings(self, remote_host: str, remote_path: str) -> None:
+        """Update VS Code settings to configure SSH terminal profile"""
+        vscode_dir = Path.cwd() / ".vscode"
+        settings_file = vscode_dir / "settings.json"
+
+        # Create .vscode directory if it doesn't exist
+        vscode_dir.mkdir(exist_ok=True)
+
+        # Terminal profile configuration
+        ssh_profile_name = f"SSH to {remote_host}"
+        terminal_config = {
+            "terminal.integrated.defaultProfile.osx": ssh_profile_name,
+            "terminal.integrated.profiles.osx": {
+                ssh_profile_name: {
+                    "path": "ssh",
+                    "args": [
+                        remote_host,
+                        "-t",
+                        f"cd '{remote_path}' && exec $SHELL -l",
+                    ],
+                    "icon": "server-environment",
+                },
+                "zsh": {"path": "zsh", "args": ["-l"]},
+            },
+        }
+
+        try:
+            existing_settings = {}
+
+            # Read existing settings if file exists
+            if settings_file.exists():
+                with open(settings_file, "r") as f:
+                    content = f.read()
+
+                # Remove comments and trailing commas for parsing
+                import re
+
+                # Remove single-line comments
+                content_no_comments = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
+                # Remove multi-line comments
+                content_no_comments = re.sub(
+                    r"/\*.*?\*/", "", content_no_comments, flags=re.DOTALL
+                )
+                # Remove trailing commas before } or ]
+                content_no_comments = re.sub(r",(\s*[}\]])", r"\1", content_no_comments)
+
+                if content_no_comments.strip():
+                    try:
+                        existing_settings = json.loads(content_no_comments)
+                    except json.JSONDecodeError:
+                        self._warn(
+                            "Could not parse existing settings.json, will create backup"
+                        )
+                        # Create backup
+                        backup_file = settings_file.with_suffix(".json.backup")
+                        shutil.copy2(settings_file, backup_file)
+                        self._log(f"Backup created: {backup_file}")
+
+            # Merge terminal configuration
+            existing_settings.update(terminal_config)
+
+            # Write updated settings with proper formatting
+            with open(settings_file, "w") as f:
+                f.write("{\n")
+
+                # Write each setting with proper indentation
+                settings_items = list(existing_settings.items())
+                for i, (key, value) in enumerate(settings_items):
+                    # Add comment for terminal settings
+                    if key.startswith("terminal.integrated"):
+                        if key == "terminal.integrated.defaultProfile.osx":
+                            f.write(f"    // Default terminal profile for SSH\n")
+                        elif key == "terminal.integrated.profiles.osx":
+                            f.write(f"    // Terminal profiles configuration\n")
+
+                    # Write the setting
+                    json_value = json.dumps(value, indent=4)
+                    # Adjust indentation for nested objects
+                    indented_value = json_value.replace("\n", "\n    ")
+                    f.write(f'    "{key}": {indented_value}')
+
+                    # Add comma if not last item
+                    if i < len(settings_items) - 1:
+                        f.write(",")
+                    f.write("\n")
+
+                f.write("}")
+
+            self._log(f"✓ Updated VS Code settings: {settings_file}")
+            self._log(f"  Default terminal: SSH to {remote_host}")
+
+        except Exception as e:
+            self._error(f"Failed to update VS Code settings: {e}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generic Mutagen management script",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "command",
+        choices=[
+            "init",
+            "start",
+            "stop",
+            "status",
+            "restart",
+            "logs",
+            "monitor",
+            "conflicts",
+            "test-ssh",
+        ],
+        help="Command to execute",
+    )
+
+    parser.add_argument(
+        "--config",
+        default="mutagen.yml",
+        help="Configuration file path (default: mutagen.yml)",
+    )
+
+    args = parser.parse_args()
+
+    try:
+        manager = MutagenManager(args.config)
+
+        # Handle init command separately (doesn't need config validation)
+        if args.command == "init":
+            manager.init_project()
+            return
+
+        # Load config and check prerequisites for other commands
+        manager._load_config()
+        manager._check_prerequisites()
+
+        command_map = {
+            "start": manager.start_session,
+            "stop": manager.stop_session,
+            "status": manager.show_status,
+            "restart": manager.restart_session,
+            "logs": manager.show_logs,
+            "monitor": manager.monitor_session,
+            "conflicts": manager.handle_conflicts,
+            "test-ssh": manager.test_ssh_connection,
+        }
+
+        command_map[args.command]()
+
+    except KeyboardInterrupt:
+        print("\nOperation cancelled by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"{Colors.RED}Error: {e}{Colors.NC}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
