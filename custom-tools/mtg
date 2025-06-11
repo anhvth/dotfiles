@@ -87,6 +87,69 @@ class MutagenManager:
 
         self._log(f"✓ Added '{entry}' to .gitignore")
 
+    def _parse_ports(self, ports_input: str) -> List[int]:
+        """Parse port input supporting both individual ports and ranges.
+
+        Args:
+            ports_input: Comma-separated port specification (e.g., "8888,8000-8005")
+
+        Returns:
+            List of individual port numbers
+
+        Raises:
+            ValueError: If port format is invalid
+        """
+        if "-" in ports_input:
+            start, end = ports_input.split("-", 1)
+
+            return list(range(int(start.strip()), int(end.strip()) + 1))
+        ports = []
+        for item in ports_input.split(","):
+            item = item.strip()
+            if not item:
+                continue
+
+            if "-" in item:
+                # Handle port range (e.g., "8000-8005")
+                try:
+                    start_str, end_str = item.split("-", 1)
+                    start_port = int(start_str.strip())
+                    end_port = int(end_str.strip())
+
+                    if start_port > end_port:
+                        raise ValueError(
+                            f"Invalid range {item}: start port must be <= end port"
+                        )
+                    if start_port < 1 or end_port > 65535:
+                        raise ValueError(
+                            f"Invalid range {item}: ports must be between 1-65535"
+                        )
+                    if end_port - start_port > 100:
+                        raise ValueError(
+                            f"Range {item} too large (max 100 ports per range)"
+                        )
+
+                    ports.extend(range(start_port, end_port + 1))
+                except ValueError as e:
+                    if "invalid literal" in str(e):
+                        raise ValueError(f"Invalid port range format: {item}")
+                    raise
+            else:
+                # Handle individual port
+                try:
+                    port = int(item)
+                    if port < 1 or port > 65535:
+                        raise ValueError(
+                            f"Invalid port {port}: must be between 1-65535"
+                        )
+                    ports.append(port)
+                except ValueError as e:
+                    if "invalid literal" in str(e):
+                        raise ValueError(f"Invalid port number: {item}")
+                    raise
+
+        return ports
+
     def init_project(self) -> None:
         """Initialize project by copying template configuration"""
         target_file = Path.cwd() / "mutagen.yml"
@@ -131,10 +194,39 @@ class MutagenManager:
                 remote_host = input("Remote SSH host: ").strip()
 
             # Remote path with intelligent default
-            default_remote = f"/home/{Path.home().name}/projects/{project_name}"
+            default_remote = (
+                local_path  # f"/home/{Path.home().name}/projects/{project_name}"
+            )
             remote_path = input(f"Remote project path [{default_remote}]: ").strip()
             if not remote_path:
                 remote_path = default_remote
+
+            # Ports configuration
+            ports_input = input(
+                "Port forwarding (comma-separated, ranges supported, e.g., 8888,8889,8000-8005 or Enter for none): "
+            ).strip()
+
+            # Parse and configure ports
+            port_config = ""
+            if ports_input:
+                try:
+                    ports = self._parse_ports(ports_input)
+                    if ports:
+                        port_config = "\nports:\n"
+                        for i, port in enumerate(ports):
+                            forward_name = f"port{port}"
+                            port_config += f"    {forward_name}: {port}\n"
+                            print("Port forwarding configured:", forward_name, port)
+                            # if i == 0:
+                            #     # First port becomes the default jupyter port
+                            #     port_config += f"  jupyter: {port}\n"
+                            #     port_config += f"\nforwardName: {forward_name}\n"
+                            # else:
+                            #     # Additional ports can be added later
+                            #     port_config += f"  # Additional port: {port}\n"
+                except ValueError as e:
+                    self._warn(f"Invalid port format: {e}, skipping port configuration")
+                    port_config = ""
 
             # Replace placeholders in template
             configured_content = template_content.replace("PROJECT_NAME", project_name)
@@ -143,6 +235,15 @@ class MutagenManager:
                 "REMOTE_SSH_HOST", remote_host
             )
             configured_content = configured_content.replace("REMOTE_PATH", remote_path)
+
+            # Add port configuration if provided
+            if port_config:
+                assert (
+                    "# Add port configuration here" in configured_content
+                ), "Template must contain '# Add port configuration here' placeholder"
+                configured_content = configured_content.replace(
+                    "# Add port configuration here", port_config.strip()
+                )
 
             # Write configured file
             with open(target_file, "w") as f:
@@ -159,6 +260,8 @@ class MutagenManager:
             print(f"  Project: {project_name}")
             print(f"  Local:   {local_path}")
             print(f"  Remote:  {remote_host}:{remote_path}")
+            if ports_input:
+                print(f"  Ports:   {ports_input}")
             print()
             self._log("✓ VS Code terminal configured for SSH connection")
             self._log("You can now run 'mtg start' to begin syncing")

@@ -6,6 +6,7 @@ project:
   localPath: "LOCAL_PATH"
   remoteHost: "REMOTE_SSH_HOST"
   remotePath: "REMOTE_PATH"
+  # Add port configuration here
   # ports:
   #   jupyter: 8888
   #   dev: 8080
