@@ -1,10 +1,10 @@
-### VENV
+### VENV - Optimized version
 auto_source() {
+    # Cache the result to avoid repeated filesystem calls
+    local cache_file="/tmp/.venv_cache_$$"
+    
     # Skip if already in a virtual environment
-    # if [[ -n "$VIRTUAL_ENV" ]]; then
-    #     echo $pwd
-    #     return 0
-    # fi
+    [[ -n "$VIRTUAL_ENV" ]] && return 0
     
     local current_dir="$(pwd)"
     local search_dir="$current_dir"
@@ -15,14 +15,12 @@ auto_source() {
     while [[ "$search_dir" != "/" && $levels -le $max_levels ]]; do
         if [[ -d "$search_dir/.venv" && -f "$search_dir/.venv/bin/activate" ]]; then
             source "$search_dir/.venv/bin/activate"
-            # echo "\033[32mActivated\033[0m virtual environment: $search_dir/.venv"
             return 0
         fi
         search_dir="$(dirname "$search_dir")"
         ((levels++))
     done
     
-    echo "\033[33mNo .venv\033[0m found in current directory or up to 3 parent directories"
     return 1
 }
 

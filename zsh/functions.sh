@@ -415,3 +415,44 @@ timezsh() {
   shell=${1-$SHELL}
   for i in $(seq 1 10); do /usr/bin/time $shell -i -c exit; done
 }
+
+# Helper functions for managing performance
+zsh_reload() {
+    echo "🔄 Reloading zsh configuration..."
+    source ~/.zshrc
+    echo "✅ Done!"
+}
+
+zsh_fast() {
+    echo "🚀 Switching to fast mode..."
+    export ZSH_FAST_MODE=1
+    exec zsh
+}
+
+zsh_full() {
+    echo "🐌 Switching to full mode..."
+    unset ZSH_FAST_MODE
+    exec zsh
+}
+
+zsh_bench() {
+    echo "📊 Running zsh startup benchmark..."
+    $HOME/dotfiles/zsh/benchmark.sh
+}
+
+zsh_enable_suggestions() {
+    echo "💡 Enabling autosuggestions..."
+    if [[ ! -f ~/.zsh_suggestions_enabled ]]; then
+        touch ~/.zsh_suggestions_enabled
+        source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+        echo "✅ Autosuggestions enabled!"
+    else
+        echo "ℹ️  Autosuggestions already enabled"
+    fi
+}
+
+zsh_disable_suggestions() {
+    echo "🚫 Disabling autosuggestions..."
+    rm -f ~/.zsh_suggestions_enabled
+    echo "✅ Autosuggestions disabled! Restart zsh to take effect."
+}

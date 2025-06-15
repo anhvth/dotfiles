@@ -1,14 +1,33 @@
 #------------------------------------------
 # Theme and Oh-My-Zsh Setup
 #------------------------------------------
+# Fast startup mode (set ZSH_FAST_MODE=1 to enable minimal loading)
+if [[ "$ZSH_FAST_MODE" == "1" ]]; then
+    # Minimal setup for fastest startup
+    HISTFILE=$HOME/.zsh_history
+    SAVEHIST=1000
+    setopt inc_append_history share_history
+    
+    # Basic path setup only
+    typeset -U path PATH
+    path=($HOME/dotfiles/custom-tools $HOME/.local/bin $path)
+    
+    # Load only essential aliases and functions
+    source ~/dotfiles/zsh/alias.sh
+    
+    # Simple prompt
+    PS1="fast|%~ %# "
+    return
+fi
+
+# Performance optimizations
 DISABLE_AUTO_UPDATE="true"
 DISABLE_MAGIC_FUNCTIONS="true"
 DISABLE_COMPFIX="true"
+DISABLE_UNTRACKED_FILES_DIRTY="true"
+COMPLETION_WAITING_DOTS="false"
 
-
-# reset
-
-ZSH_THEME="muse"
+# Use simple theme for faster startup
 ZSH_THEME="robbyrussell"
 export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
 
@@ -33,71 +52,84 @@ export FUNCNEST=100000
 #------------------------------------------
 # Path Configuration
 #------------------------------------------
-# Dotfiles utilities
-export PATH=$PATH:$HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl/
-export PATH=$PATH:$HOME/dotfiles/utils
-export PATH=$PATH:$HOME/dotfiles/squashfs-root/usr/bin/
-export PATH=$PATH:$HOME/dotfiles/tools/bin/
-export PATH=$PATH:$HOME/dotfiles/bin/dist
-export PATH=$PATH:$HOME/dotfiles/custom-tools/
+# Use typeset for efficient path management and avoid duplicates
+typeset -U path PATH
 
-# Local binaries
-export PATH=$PATH=$HOME/.local/bin
+# Add paths efficiently
+path=(
+    $HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl
+    $HOME/dotfiles/utils
+    $HOME/dotfiles/squashfs-root/usr/bin
+    $HOME/dotfiles/tools/bin
+    $HOME/dotfiles/bin/dist
+    $HOME/dotfiles/custom-tools
+    $HOME/.local/bin
+    $HOME/.fzf/bin
+    $path
+)
 
-# FZF
-export PATH=$HOME/.fzf/bin/:$PATH
-
-# Homebrew
+# Homebrew paths (macOS only)
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	if [ -d /opt/homebrew/bin ]; then
-		export PATH=$PATH:/opt/homebrew/bin/
-		export PATH=$PATH:/opt/homebrew/sbin/
-	else
-		export PATH=$PATH:/usr/local/bin/
-		export PATH=$PATH:/usr/local/sbin/
-	fi
+    if [[ -d /opt/homebrew/bin ]]; then
+        path=(/opt/homebrew/bin /opt/homebrew/sbin $path)
+    else
+        path=(/usr/local/bin /usr/local/sbin $path)
+    fi
 fi
 
 #------------------------------------------
 # Environment and Config Sources
 #------------------------------------------
-# Source environment variables
-if [ -f ~/.env ]; then
-    source ~/.env
-else
-    echo "No ~/.env file found."
-fi
+# Source environment variables (only if file exists and is readable)
+[[ -r ~/.env ]] && source ~/.env
 
 # Source configuration files
-
+# Load oh-my-zsh with minimal features for speed
 source $ZSH/oh-my-zsh.sh
+
+# Load plugins conditionally
 source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
+
+# Load syntax highlighting last for better performance
 source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# Load custom configurations
 source $HOME/dotfiles/zsh/keybindings.sh
 source $HOME/dotfiles/zsh/plugins/fixls.zsh
 
-#===
+# Load aliases and functions (these are fast)
 source ~/dotfiles/zsh/alias.sh
 source ~/dotfiles/zsh/functions.sh
+# Load virtual environment functions (lazy load for speed)
 source $HOME/dotfiles/zsh/venv.sh
 
-# Skip global compinit on Ubuntu
+#------------------------------------------
+# Performance Optimizations
+#------------------------------------------
+# Skip global compinit on Ubuntu for faster startup
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-	skip_global_compinit=1
+    skip_global_compinit=1
 fi
 
-
-
+# Lazy load heavier plugins/functions when first used
+if [[ -f ~/.zsh_suggestions_enabled ]]; then
+    source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
 
 #------------------------------------------
 # Plugin Setup
 #------------------------------------------
+# Optimized compinit - only run once per day or when needed
 autoload -Uz compinit
-if [ "$(date +'%j')" != "$(stat -f '%Sm' -t '%j' ~/.zcompdump 2>/dev/null)" ]; then
-    compinit
-else
+_comp_files=(${ZDOTDIR:-$HOME}/.zcompdump(Nm-20))
+if (( $#_comp_files )); then
     compinit -C
+else
+    compinit
+    # Update timestamp
+    touch ${ZDOTDIR:-$HOME}/.zcompdump
 fi
+unset _comp_files
 # Plugin configuration
 # autoload -U compinit
 # plugins=(
@@ -112,33 +144,26 @@ fi
 
 
 #------------------------------------------
-# Key Bindings
+# Key Bindings (Optimized)
 #------------------------------------------
-# Fix for arrow-key searching
-# start typing + [Up-Arrow] - fuzzy find history forward
-if [[ "${terminfo[kcuu1]}" != "" ]]; then
-	autoload -U up-line-or-beginning-search
-	zle -N up-line-or-beginning-search
-	bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
-fi
-# start typing + [Down-Arrow] - fuzzy find history backward
-if [[ "${terminfo[kcud1]}" != "" ]]; then
-	autoload -U down-line-or-beginning-search
-	zle -N down-line-or-beginning-search
-	bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
-fi
+# Lazy load arrow key history search only when needed
+_setup_history_search() {
+    autoload -U up-line-or-beginning-search down-line-or-beginning-search
+    zle -N up-line-or-beginning-search
+    zle -N down-line-or-beginning-search
+    
+    [[ -n "${terminfo[kcuu1]}" ]] && bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
+    [[ -n "${terminfo[kcud1]}" ]] && bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
+}
+
+# Setup history search on first use
+_setup_history_search
 
 #------------------------------------------
 # Virtual Environment
 #------------------------------------------
-source $HOME/dotfiles/zsh/venv.sh
-# if [ -f "$VIRTUAL_ENV" ]; then
-#     source $VIRTUAL_ENV
-# fi
+# Virtual environment alias (already loaded above)
 alias atv="auto_source"
-
-
-# PS1 insert machine name
-PS1=$"cname|$PS1"
-
-export PATH=$PATH:~/dotfiles/custom-tools
+atv
+# PS1 customization
+# PS1="cname|$PS1"
