@@ -330,7 +330,7 @@ test_proxy() {
     fi
 
     echo "Testing proxy on $PROXY ..."
-    curl -x "$PROXY" -s -o /dev/null -w "\nStatus: %{http_code}\nUsed Proxy: %{proxy}\n" "$TEST_URL"
+    curl -x "$PROXY" -s -o /dev/null -w "\nStatus: %{http_code}\n" "$TEST_URL"
 }
 
 keep_ssh() {
