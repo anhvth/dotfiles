@@ -40,13 +40,13 @@ c() {
     ls
 }
 
-p() {
-    CUDA_VISIBLE_DEVICES=$1 python
-}
+# p() {
+#     CUDA_VISIBLE_DEVICES=$1 python
+# }
 
-j() {
-    CUDA_VISIBLE_DEVICES=$1 jupyter lab
-}
+# j() {
+#     CUDA_VISIBLE_DEVICES=$1 jupyter lab
+# }
 docker-run() {
     HISTORY_FILE=${HOME}'/docker-history/'${PWD}
     #	HISTORY_FILE=$(pwd)/$DOCKER_ACTIVE_CONTAINER
@@ -137,24 +137,21 @@ fkill() {
     fi
 }
 
-download-google() {
-    echo "Filename:" $1
-    echo "FileID:" $2
-    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=$2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=$2" -O $1 && rm -rf /tmp/cookies.txt
-}
 
-start_docker() {
-    cd ~/gitprojects/docker
-    echo "CID:" $1
-    ./start_docker.sh $1
-}
-speak-ssh() {
-    mux kill-session -t ssh
-    /etc/init.d/ssh start
-    tssh speak
-}
+
+# start_docker() {
+#     cd ~/gitprojects/docker
+#     echo "CID:" $1
+#     ./start_docker.sh $1
+# }
+# speak-ssh() {
+#     mux kill-session -t ssh
+#     /etc/init.d/ssh start
+#     tssh speak
+# }
 
 fh() {
+    # This function uses fzf to select a command from the history and executes it.
     eval $( ([ -n "$ZSH_NAME" ] && fc -l 1 || history) | fzf +s --tac | sed -r 's/ *[0-9]*\*? *//' | sed -r 's/\\/\\\\/g')
 }
 tssh() {
@@ -183,7 +180,7 @@ fif() {
         s+=$a
     done
 
-    _file=$(grep --line-buffered --color=never -r "$s" * | fzf)
+    _file=$(grep --line-buffered --color=never -I -r "$s" * | fzf)
     export _file=$_file
     file=$(python -c 'import os; print(os.environ.get("_file", "").split(":")[0])')
     echo $file
@@ -344,4 +341,72 @@ keep_ssh() {
         -o "ServerAliveCountMax=3" \
         -o "ExitOnForwardFailure=yes" \
         $1
+}
+
+
+
+#------------------------------------------
+# Functions
+#------------------------------------------
+# Environment variable management
+set_env() {
+	local varname=$1
+	local value=$2
+
+	if [ -z "$varname" ] || [ -z "$value" ]; then
+		echo "Usage: set_env <varname> <value>"
+		return 1
+	fi
+
+	# Remove existing entry for the variable
+	if grep -q "^${varname}=" ~/.env; then
+		sed -i.bak "/^${varname}=/d" ~/.env
+	fi
+
+	# Add the new value
+	echo "${varname}=${value}" >> ~/.env
+	echo "Set ${varname}=${value} in ~/.env"
+}
+
+unset_env() {
+	local varname=$1
+
+	if [ -z "$varname" ]; then
+		echo "Usage: unset_env <varname>"
+		return 1
+	fi
+
+	# Remove the entry for the variable
+	if grep -q "^${varname}=" ~/.env; then
+		sed -i.bak "/^${varname}=/d" ~/.env
+		echo "Unset ${varname} from ~/.env"
+	else
+		echo "${varname} not found in ~/.env"
+	fi
+}
+
+# Alias management
+set_alias() {
+	local aliasname=$1
+	local command=$2
+
+	if [ -z "$aliasname" ] || [ -z "$command" ]; then
+		echo "Usage: set_alias <aliasname> <command>"
+		return 1
+	fi
+
+	local alias_file="$HOME/dotfiles/zsh/alias.sh"
+	
+	# Remove existing alias if it exists
+	if grep -q "^alias ${aliasname}=" "$alias_file"; then
+		sed -i.bak "/^alias ${aliasname}=/d" "$alias_file"
+	fi
+
+	# Add the new alias
+	echo "alias ${aliasname}=\"${command}\"" >> "$alias_file"
+	
+	# Source the alias file to make it immediately available
+	source "$alias_file"
+	
+	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
 }
