@@ -410,3 +410,8 @@ set_alias() {
 	
 	echo "Set alias ${aliasname}=\"${command}\" in $alias_file"
 }
+
+timezsh() {
+  shell=${1-$SHELL}
+  for i in $(seq 1 10); do /usr/bin/time $shell -i -c exit; done
+}

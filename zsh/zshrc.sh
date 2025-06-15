@@ -1,6 +1,10 @@
 #------------------------------------------
 # Theme and Oh-My-Zsh Setup
 #------------------------------------------
+DISABLE_AUTO_UPDATE="true"
+DISABLE_MAGIC_FUNCTIONS="true"
+DISABLE_COMPFIX="true"
+
 
 # reset
 
@@ -88,17 +92,23 @@ fi
 #------------------------------------------
 # Plugin Setup
 #------------------------------------------
+autoload -Uz compinit
+if [ "$(date +'%j')" != "$(stat -f '%Sm' -t '%j' ~/.zcompdump 2>/dev/null)" ]; then
+    compinit
+else
+    compinit -C
+fi
 # Plugin configuration
-autoload -U compinit
-plugins=(
-	docker 
-)
+# autoload -U compinit
+# plugins=(
+# 	docker 
+# )
 
-for plugin ($plugins); do
-    fpath=($HOME/dotfiles/zsh/plugins/oh-my-zsh/plugins/$plugin $fpath)
-done
+# for plugin ($plugins); do
+#     fpath=($HOME/dotfiles/zsh/plugins/oh-my-zsh/plugins/$plugin $fpath)
+# done
 
-compinit
+# compinit
 
 
 #------------------------------------------
