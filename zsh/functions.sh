@@ -317,17 +317,12 @@ init_copilot_instruction() {
 }
 
 test_proxy() {
-    local PORT=$1
-    local PROXY="http://127.0.0.1:$PORT"
-    local TEST_URL="http://example.com"
-
-    if [ -z "$PORT" ]; then
-        echo "Usage: test_proxy <port>"
-        return 1
+    output=$(curl -x 127.0.0.1:$1 https://www.google.com -I)
+    if echo "$output" | grep -q "200"; then
+        echo "Proxy is working"
+    else
+        echo "Proxy is not working"
     fi
-
-    echo "Testing proxy on $PROXY ..."
-    curl -x "$PROXY" -s -o /dev/null -w "\nStatus: %{http_code}\n" "$TEST_URL"
 }
 
 keep_ssh() {
