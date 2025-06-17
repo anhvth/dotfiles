@@ -459,7 +459,7 @@ my-autossh() {
     force_restart=true
     # check if restart is forced
     if [ "$force_restart" = true ]; then
-        echo "Force restart is enabled. Stopping any existing autossh connections."
+        # echo "Force restart is enabled. Stopping any existing autossh connections."
         pkill -f "autossh.*$hostname"
     fi
 
@@ -481,4 +481,11 @@ my-autossh() {
             echo "Failed to start autossh connection to $hostname."
         fi
     fi
+}
+setup-autossh() {
+    allhost=$(grep -E 'Host\s+' ~/.ssh/config | awk '{print $2}' | grep -- '-port$' | sort -u)
+    for host in $allhost; do
+        # echo "HOST: $host"
+        my-autossh "$host"
+    done
 }
