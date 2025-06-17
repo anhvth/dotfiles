@@ -163,7 +163,10 @@ _setup_history_search
 # Virtual Environment
 #------------------------------------------
 # Virtual environment alias (already loaded above)
-alias atv="auto_source"
-atv
-# PS1 customization
-# PS1="cname|$PS1"
+# atv
+# check if VIRTUAL_ENV is available then do source
+if [[ -n "$VIRTUAL_ENV" ]]; then
+    # echo "Activating virtual environment: $VIRTUAL_ENV"
+    # echo "To switch environments, cd to your project and run: atv"
+    source "$VIRTUAL_ENV/bin/activate"
+fi

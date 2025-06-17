@@ -1,35 +1,23 @@
 ### VENV - Optimized version
-auto_source() {
-    # Cache the result to avoid repeated filesystem calls
-    local cache_file="/tmp/.venv_cache_$$"
-    
-    # Skip if already in a virtual environment
-    [[ -n "$VIRTUAL_ENV" ]] && return 0
-    
-    local current_dir="$(pwd)"
-    local search_dir="$current_dir"
-    local levels=0
-    local max_levels=3
-    
-    # Search for .venv in current directory and up to 3 parents
-    while [[ "$search_dir" != "/" && $levels -le $max_levels ]]; do
-        if [[ -d "$search_dir/.venv" && -f "$search_dir/.venv/bin/activate" ]]; then
-            source "$search_dir/.venv/bin/activate"
-            return 0
-        fi
-        search_dir="$(dirname "$search_dir")"
-        ((levels++))
-    done
-    
-    return 1
-}
+atv() {
+    # Accept either a venv directory or an activate script path
+    path_activate=$1
 
-create_venv() {
-    local prompt_name="$1"
-    if [[ -n "$prompt_name" ]]; then
-        python3 -m venv .venv --prompt "$prompt_name"
+    if [[ -d "$path_activate" && -f "$path_activate/bin/activate" ]]; then
+        realpath_activate=$(realpath "$path_activate" 2>/dev/null)
+        activate_script="$realpath_activate/bin/activate"
+    elif [[ -f "$path_activate" ]]; then
+        activate_script=$(realpath "$path_activate" 2>/dev/null)
+        realpath_activate=$(dirname "$(dirname "$activate_script")")
     else
-        python3 -m venv .venv
+        echo "Invalid virtual environment path: $path_activate"
+        return 1
     fi
-    source .venv/bin/activate && pip install poetry uv
+
+    set_env VIRTUAL_ENV "$realpath_activate"
+    source "$activate_script" 2>/dev/null || {
+        echo "Failed to activate virtual environment at $activate_script"
+        return 1
+    }
+    return 0
 }
