@@ -1,147 +1,243 @@
 #!/usr/bin/env python3
+"""project_catter.py — Create a per‑file snapshot of a Python code‑base
+=======================================================================
 
-import os
+* Walk one or more roots and collect files that match the requested
+  extensions (default: ``.py``).
+* Ignore typical development artefacts (``.venv``, ``__pycache__`` …).
+* For every file output a *block* that looks like::
+
+    <src/module/foo.py>
+    ...code or summary...
+    </src/module/foo.py>
+
+* If ``--summarise`` is **off** the block contains the raw file.
+* If ``--summarise`` is **on** the block contains a *structured summary*
+  generated with Python’s ``ast`` module.  No‑network, no‑API‑keys.
+
+The snapshot is designed for ingestion by downstream LLMs or diff tools.
+
+Usage
+-----
+>>> python project_catter.py my_repo/ -e .py,.pyi --summarise -w 16 > snapshot.txt
+"""
+from __future__ import annotations
+
 import argparse
+import ast
+import concurrent.futures as cf
+import re
+import sys
+from pathlib import Path
+from typing import Iterable, List, Sequence
+
+from loguru import logger
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+DEFAULT_EXTS: tuple[str, ...] = (".py",)
+IGNORED_PATTERNS: tuple[str, ...] = (
+    ".venv",
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".FOLDER",
+)
+MAX_LINE_LEN = 120
 
 
-from pydantic import BaseModel
-from typing import List
-
-# from openai import OpenAI
-
-# client = OpenAI()
+# ---------------------------------------------------------------------------
+# Helper – file discovery & I/O
+# ---------------------------------------------------------------------------
 
 
-def summarize_python_file(python_file: str) -> str:
-    is_no_line_with_def = all(
-        [not line.strip().startswith("def ") for line in python_file.split("\n")]
-    )
-    is_no_line_with_class = all(
-        [not line.strip().startswith("class ") for line in python_file.split("\n")]
-    )
-    if is_no_line_with_def and is_no_line_with_class:
-        return python_file
+def iter_paths(root_paths: Sequence[Path], exts: Sequence[str]) -> Iterable[Path]:
+    """Yield files under *root_paths* whose suffix is in *exts* and whose path
+    does **not** contain any string in :pydata:`IGNORED_PATTERNS`."""
 
-    prompt = f"""You will be given a Python file content to summarize. Your task is to:
-1. Read through the Python file provided in PYTHON_FILE_CONTENT.
-2. For each **class** in the file:
-    - Identify the class name.
-    - Provide a brief summary of the class's purpose.
-    - List and describe any attributes or special methods (e.g., __init__).
-3. For each **method** in the file:
-    - Identify the method name.
-    - Summarize the method's purpose.
-    - Describe the parameters it takes and the return type if available.
-4. If the file does not contain any classes or methods, write "No classes or methods found."
-5. Present the output in a structured list format, grouping the classes and their corresponding methods together.
+    exts_set = {e.lower() for e in exts}
+    for root in root_paths:
+        if root.is_file() and root.suffix.lower() in exts_set:
+            logger.debug("Yield single file: {}", root)
+            yield root
+            continue
 
-Make sure the output is clear and concise.
-<PYTHON_FILE_CONTENT>
-{python_file}
-</PYTHON_FILE_CONTENT>
-Sumarize: """
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-    )
-    sumarize = completion.choices[0].message.content
-    return sumarize
+        for file in root.rglob("*"):
+            if not file.is_file():
+                continue
+            if file.suffix.lower() not in exts_set:
+                continue
+            if any(pat in str(file) for pat in IGNORED_PATTERNS):
+                continue
+            logger.trace("Yield: {}", file)
+            yield file
 
 
-import os
+def read_text(path: Path) -> str:
+    """Return file content with universal‑newline handling."""
+    try:
+        return path.read_text(encoding="utf‑8", errors="replace")
+    except Exception as exc:  # pragma: no cover — rare
+        logger.warning("Failed reading {}: {}", path, exc)
+        return ""  # empty but keeps block
 
 
-def get_text2print(file, sumarize=False) -> str:
-    """
-    Given a file path, reads the file content and returns a formatted string with markup.
-    """
-    relative_path = os.path.relpath(file, os.getcwd())
-    markup = []
-    with open(file, "r", encoding="utf-8") as f:
-        markup.append(f.read())
-
-    content = "\n".join(markup)
-    if sumarize:
-        formatted_content = summarize_python_file(content)
-    else:
-        formatted_content = content
-    formatted_content = f"<{relative_path}>\n{formatted_content}\n</{relative_path}>"
-    return formatted_content
-
-    # return "\n".join(markup)
+# ---------------------------------------------------------------------------
+# AST‑based summariser (zero external calls)
+# ---------------------------------------------------------------------------
 
 
-def print_file_contents(inputs, file_extensions=".py", sumarize=False):
-    """
-    Prints the contents of files or files within directories specified in the inputs list,
-    only if the files have valid extensions.
-    """
-    file_extensions = file_extensions.split(",")
+def _truncate(text: str, limit: int = MAX_LINE_LEN) -> str:
+    text = re.sub(r"\s+", " ", text.strip())
+    return text if len(text) <= limit else text[: limit - 3] + "…"
 
-    def is_valid_ext(file):
-        ext = os.path.splitext(file)[1]
-        return ext in file_extensions
 
-    texts = []
-    for input_path in inputs:
+def _first_docline(node: ast.AST, kind: str, name: str) -> str:
+    """Return first non‑empty docstring line or generic fallback."""
+    doc = ast.get_docstring(node, clean=True)
+    if doc:
+        for line in doc.splitlines():
+            if line := line.strip():
+                return line
+    return f"Provides functionality for the {kind} '{name}'."
 
-        if os.path.isdir(input_path):
-            file_paths = []
-            for root, dirs, files in os.walk(input_path):
-                for file in files:
-                    if is_valid_ext(file):
-                        file_path = os.path.join(root, file)
-                        file_paths.append(file_path)
-            from speedy_utils import multi_thread  # type: ignore
 
-            if sumarize:
-                f = lambda file: get_text2print(file, sumarize=True)
+def _params_returns(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Return ``(param, …) → Ret`` string for *node*."""
+
+    try:
+        params = ast.unparse(node.args)
+    except Exception:  # pragma: no cover — edge cases
+        pos = [a.arg for a in node.args.args]
+        if node.args.vararg:
+            pos.append(f"*{node.args.vararg.arg}")
+        if node.args.kwarg:
+            pos.append(f"**{node.args.kwarg.arg}")
+        params = f"({', '.join(pos)})"
+
+    ret = ""
+    if node.returns is not None:
+        try:
+            ret = f" → {ast.unparse(node.returns)}"
+        except Exception:  # pragma: no cover
+            if isinstance(node.returns, ast.Name):
+                ret = f" → {node.returns.id}"
             else:
-                f = get_text2print
-            ff = lambda x: f(x)
-            print(file_paths[:3]+["..."]+file_paths[-3:])
-            # ignore where contain ".FOLDER"
-            ignore_keywords = [".venv", ".FOLDER", "__pycache__", ".git", ".mypy_cache"]
-            def ignore_file(file):
-                return not any(keyword in file for keyword in ignore_keywords)
-            
-            file_paths = [fp for fp in file_paths if ignore_file(fp)]
-            texts = multi_thread(ff, file_paths, workers=32)
-            # texts = [get_text2print(file) for file in file_paths]
-            text = "\n".join(texts)
-            print(text)
-
-        elif os.path.isfile(input_path) and is_valid_ext(input_path):
-            text = get_text2print(input_path)
-            # texts.append()
-
-        else:
-            text = f"Error: {input_path} is not a valid file or directory, or it does not have a valid extension."
-
-        print(text)
+                ret = " → ?"
+    return params + ret
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Prints the contents of specified files or files within directories."
-    )
-    parser.add_argument(
-        "inputs", nargs="+", help="List of files or directories to scan."
-    )
-    parser.add_argument(
+def summarise_python(code: str, path: str) -> str:
+    """Return structured summary of *code* or raise on syntax error."""
+    tree = ast.parse(code, filename=path)
+    lines: list[str] = []
+
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            cname = node.name
+            lines.append(
+                _truncate(f"▸ Class {cname}: {_first_docline(node, 'class', cname)}")
+            )
+            for sub in node.body:
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    mname = sub.name
+                    purpose = _first_docline(sub, "method", mname)
+                    sig = _params_returns(sub)
+                    lines.append(_truncate(f"• {mname}{sig}: {purpose}"))
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            fname = node.name
+            purpose = _first_docline(node, "function", fname)
+            sig = _params_returns(node)
+            lines.append(_truncate(f"▸ Function {fname}{sig}: {purpose}"))
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Public helpers
+# ---------------------------------------------------------------------------
+
+
+def file_to_block(path: Path, root: Path, summarise: bool) -> str:
+    """Return ``<relpath>\ncontent\n</relpath>`` block for *path*."""
+
+    rel = path.relative_to(root)
+    text = read_text(path)
+
+    if summarise:
+        has_defs = re.search(r"\b(class|def)\b", text) is not None
+        if has_defs:
+            try:
+                text = summarise_python(text, str(rel))
+            except SyntaxError as exc:
+                logger.warning("SyntaxError in {} ({}), falling back to raw", rel, exc)
+
+    return f"<{rel}>\n{text}\n</{rel}>"
+
+
+def make_snapshot(
+    roots: Sequence[Path],
+    *,
+    exts: Sequence[str] = DEFAULT_EXTS,
+    summarise: bool = False,
+    workers: int = 8,
+) -> str:
+    """Return concatenated snapshot for *roots*."""
+
+    roots = [p.resolve() for p in roots]
+    all_files = list(iter_paths(roots, exts))
+    logger.info("{} files found", len(all_files))
+
+    def _one(p: Path) -> str:
+        root = next(r for r in roots if r in p.parents or r == p)
+        return file_to_block(p, root, summarise)
+
+    with cf.ThreadPoolExecutor(max_workers=workers) as pool:
+        blocks: List[str] = list(pool.map(_one, all_files))
+
+    return "\n".join(blocks)
+
+
+# ---------------------------------------------------------------------------
+# CLI entry‑point
+# ---------------------------------------------------------------------------
+
+
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description="Create code snapshot for LLMs.")
+    ap.add_argument("paths", nargs="+", help="Files or directories to scan.")
+    ap.add_argument(
         "-e",
-        "--extension",
-        default=".py",
-        help="File extension to look for (default: .py)",
+        "--exts",
+        default=",".join(DEFAULT_EXTS),
+        help="Comma‑separated list of file extensions (default: .py).",
     )
-    parser.add_argument(
-        "-s",
-        "--sumarize",
-        action="store_true",
-        help="Sumarize the content of the files",
+    ap.add_argument(
+        "-s", "--summarise", action="store_true", help="Summarise Python files."
     )
-    args = parser.parse_args()
+    ap.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=8,
+        help="Thread workers (default: 8).",
+    )
+    return ap.parse_args(argv)
 
-    print_file_contents(args.inputs, args.extension, args.sumarize)
+
+def main(argv: Sequence[str] | None = None) -> None:  # pragma: no cover
+    ns = _parse_args(argv)
+
+    paths = [Path(p) for p in ns.paths]
+    exts = [e if e.startswith(".") else f".{e}" for e in ns.exts.split(",") if e]
+
+    snapshot = make_snapshot(
+        paths, exts=exts, summarise=ns.summarise, workers=ns.workers
+    )
+    # Print without extra newline so output can be redirected cleanly
+    sys.stdout.write(snapshot)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    print("project_catter.py: Creating code snapshot", file=sys.stderr)
+    main()
