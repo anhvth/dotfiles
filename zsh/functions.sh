@@ -456,3 +456,34 @@ zsh_disable_suggestions() {
     rm -f ~/.zsh_suggestions_enabled
     echo "✅ Autosuggestions disabled! Restart zsh to take effect."
 }
+
+
+
+my-autossh() {
+    hostname="$1"
+    force_restart=true
+    # check if restart is forced
+    if [ "$force_restart" = true ]; then
+        echo "Force restart is enabled. Stopping any existing autossh connections."
+        pkill -f "autossh.*$hostname"
+    fi
+
+    if [ -z "$hostname" ]; then
+        echo "Usage: connect_to_host <hostname>"
+        return 1
+    fi
+
+    # Check if autossh tunnel is already running
+    if pgrep -f "autossh.*$hostname" > /dev/null; then
+        echo "autossh connection to $hostname is already running."
+    else
+        echo "Starting autossh connection to $hostname..."
+        autossh -f -M 0 -N "$hostname"
+
+        if [ $? -eq 0 ]; then
+            echo "autossh connection to $hostname started successfully."
+        else
+            echo "Failed to start autossh connection to $hostname."
+        fi
+    fi
+}
