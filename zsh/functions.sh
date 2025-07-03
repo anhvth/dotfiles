@@ -489,3 +489,38 @@ setup-autossh() {
         my-autossh "$host"
     done
 }
+
+
+
+tree_project() {
+    local project_type="$1"
+    local depth=4
+    local output_file="project-structure.instructions.md"
+    local include_ext="py|js|jsx|ts|tsx|java|go|rb|rs|cpp|c|h|cs|php|sh|pl|lua|swift|kt|m|scala|"
+    local ignore_dirs='node_modules|.git|dist|build|.next|.cache|__pycache__|.venv|env|venv|.mypy_cache|.pytest_cache|.idea|.vscode|.DS_Store|.tox|.eggs|.ipynb_checkpoints'
+
+    # Adjust ignored directories or extensions based on project type
+    case "$project_type" in
+        python)
+            include_ext="py"
+            ignore_dirs+='|.mypy_cache|.pytest_cache'
+            ;;
+        js|javascript|node)
+            include_ext="js|jsx|ts|tsx"
+            ignore_dirs+='|coverage'
+            ;;
+    esac
+
+    # Find and print only code files, then format as a tree
+    find . -type d \( $(echo $ignore_dirs | sed 's/|/ -o -name /g' | sed 's/^/-name /') \) -prune -false -o \
+        -type f -regextype posix-extended -regex ".*\.($include_ext)$" | \
+        sed 's|^\./||' | awk -F/ '
+        {
+            for(i=1;i<NF;i++){
+                printf("%*s%s/\n",i*2-2,"",$(i))
+            }
+            print sprintf("%*s%s", (NF-1)*2, "", $NF)
+        }' | uniq > "$output_file"
+
+    echo "Project code structure saved to $output_file"
+}
