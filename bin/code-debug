@@ -1,26 +1,49 @@
 #!/usr/bin/env python3
 
 import argparse
-import json5
 import json
 import os
 
+import json5
 
-def parse_to_debug_json(command_str, justMyCode, name):
+
+def parse_to_debug_json(command_str: str, just_my_code: bool, name: str) -> dict:
+    """
+    Parse command string to VS Code debug configuration.
+    Supports both python and pytest commands.
+    """
     tokens = command_str.split()
-    program = tokens[1]
-    result = {
-        "name": f"Python: {program}" if name is None else name,
-        "type": "debugpy",
-        "request": "launch",
-        "program": program,
-        "console": "integratedTerminal",
-        "justMyCode": justMyCode,
-        "cwd": "${workspaceFolder}",
-        "env": {"PYTHONPATH": "${workspaceFolder}", "DEBUG": "1"},
-        "args": tokens[2:],
-    }
-    return result
+    if len(tokens) < 2:
+        raise ValueError(
+            "Command must have at least two tokens (e.g., 'python script.py' or 'python -m pytest')."
+        )
+    if tokens[0] == "python" and tokens[1:3] == ["-m", "pytest"]:
+        # python -m pytest [args...]
+        module = "pytest"
+        args = tokens[3:]
+        config = {
+            "name": f"Python: pytest {' '.join(args)}" if name is None else name,
+            "type": "debugpy",
+            "request": "launch",
+            "module": module,
+            "args": args,
+            "justMyCode": just_my_code,
+        }
+    else:
+        program = tokens[1]
+        args = tokens[2:]
+        config = {
+            "name": f"Python: {program}" if name is None else name,
+            "type": "debugpy",
+            "request": "launch",
+            "program": program,
+            "console": "integratedTerminal",
+            "justMyCode": just_my_code,
+            "cwd": "${workspaceFolder}",
+            "env": {"PYTHONPATH": "${workspaceFolder}", "DEBUG": "1"},
+            "args": args,
+        }
+    return config
 
 
 def append_to_launch_file(configuration, launch_file_path=".vscode/launch.json"):

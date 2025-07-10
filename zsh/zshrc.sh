@@ -159,12 +159,7 @@ _setup_history_search() {
 # Setup history search on first use
 _setup_history_search
 
-#------------------------------------------
-# Virtual Environment
-#------------------------------------------
-# Virtual environment alias (already loaded above)
-# atv
-# check if VIRTUAL_ENV is available then do source
+
 if [[ -n "$VIRTUAL_ENV" ]]; then
     # echo "Activating virtual environment: $VIRTUAL_ENV"
     # echo "To switch environments, cd to your project and run: atv"
