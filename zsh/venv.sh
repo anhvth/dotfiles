@@ -79,11 +79,13 @@ venv-create() {
         c_blue "Found uv, attempting to create venv..."
         if "$uv_path" venv "${extra[@]}" "$venv_path"; then
             c_green "Created with uv: $venv_path"
+            venv-activate "$venv_name"
             return 0
         else
             c_yellow "uv failed, trying to install Python and retry..."
             if "$uv_path" python install && "$uv_path" venv "${extra[@]}" "$venv_path"; then
                 c_green "Created with uv (after Python install): $venv_path"
+                venv-activate "$venv_name"
                 return 0
             fi
         fi
@@ -96,6 +98,7 @@ venv-create() {
         [[ ${#extra[@]} -gt 0 ]] && c_yellow "Extra args ignored for python3: ${extra[*]}"
         if "$py3_path" -m venv "$venv_path"; then
             c_green "Created with python3: $venv_path"
+            venv-activate "$venv_name"
             return 0
         fi
     fi
@@ -107,6 +110,7 @@ venv-create() {
         [[ ${#extra[@]} -gt 0 ]] && c_yellow "Extra args ignored for python: ${extra[*]}"
         if "$py_path" -m venv "$venv_path"; then
             c_green "Created with python: $venv_path"
+            venv-activate "$venv_name"
             return 0
         fi
     fi
@@ -134,6 +138,15 @@ venv-activate() {
     [[ ! -f "$activate" ]] && c_red "No activate script: $activate" && return 1
     set_env VIRTUAL_ENV "$realpath"
     echo "$name" > "$HOME/.last_venv"
+    # Store PWD-to-venv association
+    local assoc_file="$HOME/.venv_pdirs"
+    local pwd_escaped
+    pwd_escaped=$(printf '%s' "$PWD" | sed 's/\//\\\//g')
+    # Remove any previous entry for this PWD
+    if [[ -f "$assoc_file" ]]; then
+        grep -v "^$PWD:" "$assoc_file" > "$assoc_file.tmp" && mv "$assoc_file.tmp" "$assoc_file"
+    fi
+    echo "$PWD:$name" >> "$assoc_file"
     source "$activate" 2>/dev/null || { c_red "Failed to activate: $activate"; return 1; }
     c_green "Activated: $(basename "$realpath")"
 }
@@ -333,14 +346,8 @@ ve() {
         help|-h|--help|'') venv-help ;;
         create)
             if venv-create "$@"; then
-                local created_env_name="$1"
-                c_blue "Activating newly created environment: $created_env_name"
-                if venv-activate "$created_env_name"; then
-                    c_blue "Installing basic packages..."
-                    ve install pip poetry wheel setuptools
-                else
-                    c_yellow "Environment created but activation failed"
-                fi
+                c_blue "Installing basic packages..."
+                ve install pip poetry wheel setuptools
             fi
             ;;
         activate) venv-activate "$@" ;;
@@ -363,12 +370,38 @@ ve() {
 
 
 
-# Auto-activate last venv if ~/.last_venv exists and is valid
-if [[ -f "$HOME/.last_venv" ]]; then
-    last_venv=$(<"$HOME/.last_venv")
-    venv_dir="$HOME/venvs/venvs/$last_venv"
-    if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
-        source "$venv_dir/bin/activate"
-        echo "[auto] Activated last venv: $last_venv"
+# Auto-activate venv associated with $PWD, else fallback to last venv
+{
+    assoc_file="$HOME/.venv_pdirs"
+    auto_venv=""
+    if [[ -f "$assoc_file" ]]; then
+        auto_venv=$(awk -F: -v d="$PWD" '$1==d{print $2}' "$assoc_file" | tail -n1)
     fi
-fi
+    if [[ -n "$auto_venv" ]]; then
+        venv_dir="$HOME/venvs/venvs/$auto_venv"
+        if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+            if source "$venv_dir/bin/activate" 2>/dev/null; then
+                c_green "[auto] Activated venv for $PWD: $auto_venv"
+            else
+                c_red "[auto] Failed to activate venv for $PWD: $auto_venv"
+            fi
+        else
+            c_red "[auto] Venv directory or activate script missing for $auto_venv"
+        fi
+    elif [[ -f "$HOME/.last_venv" ]]; then
+        last_venv=$(<"$HOME/.last_venv")
+        venv_dir="$HOME/venvs/venvs/$last_venv"
+        if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+            if source "$venv_dir/bin/activate" 2>/dev/null; then
+                c_green "[auto] Activated last venv: $last_venv"
+            else
+                c_red "[auto] Failed to activate last venv: $last_venv"
+            fi
+        else
+            c_red "[auto] Last venv directory or activate script missing: $last_venv"
+        fi
+    fi
+}
+
+
+alias atv='ve activate'
