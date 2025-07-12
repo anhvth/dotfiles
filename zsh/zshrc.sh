@@ -160,8 +160,9 @@ _setup_history_search() {
 _setup_history_search
 
 
-if [[ -n "$VIRTUAL_ENV" ]]; then
-    # echo "Activating virtual environment: $VIRTUAL_ENV"
-    # echo "To switch environments, cd to your project and run: atv"
-    source "$VIRTUAL_ENV/bin/activate"
-fi
+
+# if [[ -n "$VIRTUAL_ENV" ]]; then
+#     # echo "Activating virtual environment: $VIRTUAL_ENV"
+#     # echo "To switch environments, cd to your project and run: atv"
+#     source "$VIRTUAL_ENV/bin/activate"
+# fi
