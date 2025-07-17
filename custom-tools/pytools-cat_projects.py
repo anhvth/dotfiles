@@ -43,6 +43,7 @@ IGNORED_PATTERNS: tuple[str, ...] = (
     ".git",
     ".mypy_cache",
     ".FOLDER",
+    "node_modules"
 )
 MAX_LINE_LEN = 120
 
