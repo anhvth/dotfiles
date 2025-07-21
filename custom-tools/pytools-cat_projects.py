@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""project_catter.py — Create a per‑file snapshot of a Python code‑base
-=======================================================================
+"""project_catter.py — Create a per‑file snapshot of a code‑base
+================================================================
 
 * Walk one or more roots and collect files that match the requested
   extensions (default: ``.py``).
-* Ignore typical development artefacts (``.venv``, ``__pycache__`` …).
+* Ignore typical development artefacts (``.venv``, ``__pycache__`` …) **and**
+  any additional substrings supplied via the new ``--ignore`` option.
 * For every file output a *block* that looks like::
 
     <src/module/foo.py>
@@ -19,7 +20,8 @@ The snapshot is designed for ingestion by downstream LLMs or diff tools.
 
 Usage
 -----
->>> python project_catter.py my_repo/ -e .py,.pyi --summarise -w 16 > snapshot.txt
+>>> python project_catter.py my_repo/ -e .py,.pyi --summarise -w 16 \
+        --ignore ".test,_test" > snapshot.txt
 """
 from __future__ import annotations
 
@@ -29,21 +31,22 @@ import concurrent.futures as cf
 import re
 import sys
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Sequence, Tuple
 
 from loguru import logger
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-DEFAULT_EXTS: tuple[str, ...] = (".py",)
-IGNORED_PATTERNS: tuple[str, ...] = (
+DEFAULT_EXTS: Tuple[str, ...] = (".py",)
+DEFAULT_IGNORES: Tuple[str, ...] = (
     ".venv",
     "__pycache__",
     ".git",
     ".mypy_cache",
     ".FOLDER",
-    "node_modules"
+    "node_modules",
+    "test"
 )
 MAX_LINE_LEN = 120
 
@@ -52,13 +55,23 @@ MAX_LINE_LEN = 120
 # Helper – file discovery & I/O
 # ---------------------------------------------------------------------------
 
-
-def iter_paths(root_paths: Sequence[Path], exts: Sequence[str]) -> Iterable[Path]:
+def iter_paths(
+    root_paths: Sequence[Path],
+    exts: Sequence[str],
+    ignore_patterns: Sequence[str] = DEFAULT_IGNORES,
+) -> Iterable[Path]:
     """Yield files under *root_paths* whose suffix is in *exts* and whose path
-    does **not** contain any string in :pydata:`IGNORED_PATTERNS`."""
+    does **not** contain any string in *ignore_patterns*."""
 
     exts_set = {e.lower() for e in exts}
+    ignore_patterns_set = {p for p in ignore_patterns}
+
+    def _should_ignore(p: Path) -> bool:
+        return any(pat in str(p) for pat in ignore_patterns_set)
+
     for root in root_paths:
+        if _should_ignore(root):
+            continue
         if root.is_file() and root.suffix.lower() in exts_set:
             logger.debug("Yield single file: {}", root)
             yield root
@@ -69,7 +82,7 @@ def iter_paths(root_paths: Sequence[Path], exts: Sequence[str]) -> Iterable[Path
                 continue
             if file.suffix.lower() not in exts_set:
                 continue
-            if any(pat in str(file) for pat in IGNORED_PATTERNS):
+            if _should_ignore(file):
                 continue
             logger.trace("Yield: {}", file)
             yield file
@@ -87,7 +100,6 @@ def read_text(path: Path) -> str:
 # ---------------------------------------------------------------------------
 # AST‑based summariser (zero external calls)
 # ---------------------------------------------------------------------------
-
 
 def _truncate(text: str, limit: int = MAX_LINE_LEN) -> str:
     text = re.sub(r"\s+", " ", text.strip())
@@ -158,7 +170,6 @@ def summarise_python(code: str, path: str) -> str:
 # Public helpers
 # ---------------------------------------------------------------------------
 
-
 def file_to_block(path: Path, root: Path, summarise: bool) -> str:
     """Return ``<relpath>\ncontent\n</relpath>`` block for *path*."""
 
@@ -182,11 +193,12 @@ def make_snapshot(
     exts: Sequence[str] = DEFAULT_EXTS,
     summarise: bool = False,
     workers: int = 8,
+    ignore_patterns: Sequence[str] = DEFAULT_IGNORES,
 ) -> str:
     """Return concatenated snapshot for *roots*."""
 
     roots = [p.resolve() for p in roots]
-    all_files = list(iter_paths(roots, exts))
+    all_files = list(iter_paths(roots, exts, ignore_patterns=ignore_patterns))
     logger.info("{} files found", len(all_files))
 
     def _one(p: Path) -> str:
@@ -202,7 +214,6 @@ def make_snapshot(
 # ---------------------------------------------------------------------------
 # CLI entry‑point
 # ---------------------------------------------------------------------------
-
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Create code snapshot for LLMs.")
@@ -223,6 +234,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=8,
         help="Thread workers (default: 8).",
     )
+    ap.add_argument(
+        "-i",
+        "--ignore",
+        default="",
+        help="Comma‑separated list of additional substrings to ignore (e.g. '.test,_test').",
+    )
     return ap.parse_args(argv)
 
 
@@ -232,8 +249,15 @@ def main(argv: Sequence[str] | None = None) -> None:  # pragma: no cover
     paths = [Path(p) for p in ns.paths]
     exts = [e if e.startswith(".") else f".{e}" for e in ns.exts.split(",") if e]
 
+    extra_ignores = tuple(p.strip() for p in ns.ignore.split(",") if p.strip())
+    ignore_patterns = DEFAULT_IGNORES + extra_ignores
+
     snapshot = make_snapshot(
-        paths, exts=exts, summarise=ns.summarise, workers=ns.workers
+        paths,
+        exts=exts,
+        summarise=ns.summarise,
+        workers=ns.workers,
+        ignore_patterns=ignore_patterns,
     )
     # Print without extra newline so output can be redirected cleanly
     sys.stdout.write(snapshot)
