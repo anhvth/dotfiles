@@ -185,19 +185,21 @@ def summarise_python(code: str, path: str) -> str:
 
 def file_to_block(path: Path, root: Path, summarise: bool) -> str:
     """Return ``<relpath>\ncontent\n</relpath>`` block for *path*."""
+    try:
+        rel = path.relative_to(root)
+        text = read_text(path)
 
-    rel = path.relative_to(root)
-    text = read_text(path)
+        if summarise:
+            has_defs = re.search(r"\b(class|def)\b", text) is not None
+            if has_defs:
+                try:
+                    text = summarise_python(text, str(rel))
+                except SyntaxError as exc:
+                    logger.warning("SyntaxError in {} ({}), falling back to raw", rel, exc)
 
-    if summarise:
-        has_defs = re.search(r"\b(class|def)\b", text) is not None
-        if has_defs:
-            try:
-                text = summarise_python(text, str(rel))
-            except SyntaxError as exc:
-                logger.warning("SyntaxError in {} ({}), falling back to raw", rel, exc)
-
-    return f"<{rel}>\n{text}\n</{rel}>"
+        return f"<{rel}>\n{text}\n</{rel}>"
+    except:
+        return ""
 
 
 def make_snapshot(
