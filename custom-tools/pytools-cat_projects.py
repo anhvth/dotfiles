@@ -23,6 +23,7 @@ Usage
 >>> python project_catter.py my_repo/ -e .py,.pyi --summarise -w 16 \
         --ignore ".test,_test" > snapshot.txt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,7 +47,9 @@ DEFAULT_IGNORES: Tuple[str, ...] = (
     ".mypy_cache",
     ".FOLDER",
     "node_modules",
-    "test"
+    "test",
+    "demo",
+    "legacy"
 )
 MAX_LINE_LEN = 120
 
@@ -54,6 +57,7 @@ MAX_LINE_LEN = 120
 # ---------------------------------------------------------------------------
 # Helper – file discovery & I/O
 # ---------------------------------------------------------------------------
+
 
 def iter_paths(
     root_paths: Sequence[Path],
@@ -101,6 +105,7 @@ def read_text(path: Path) -> str:
 # AST‑based summariser (zero external calls)
 # ---------------------------------------------------------------------------
 
+
 def _truncate(text: str, limit: int = MAX_LINE_LEN) -> str:
     text = re.sub(r"\s+", " ", text.strip())
     return text if len(text) <= limit else text[: limit - 3] + "…"
@@ -108,11 +113,12 @@ def _truncate(text: str, limit: int = MAX_LINE_LEN) -> str:
 
 def _first_docline(node: ast.AST, kind: str, name: str) -> str:
     """Return first non‑empty docstring line or generic fallback."""
-    doc = ast.get_docstring(node, clean=True)
-    if doc:
-        for line in doc.splitlines():
-            if line := line.strip():
-                return line
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+        doc = ast.get_docstring(node, clean=True)
+        if doc:
+            for line in doc.splitlines():
+                if line := line.strip():
+                    return line
     return f"Provides functionality for the {kind} '{name}'."
 
 
@@ -170,6 +176,7 @@ def summarise_python(code: str, path: str) -> str:
 # Public helpers
 # ---------------------------------------------------------------------------
 
+
 def file_to_block(path: Path, root: Path, summarise: bool) -> str:
     """Return ``<relpath>\ncontent\n</relpath>`` block for *path*."""
 
@@ -214,6 +221,7 @@ def make_snapshot(
 # ---------------------------------------------------------------------------
 # CLI entry‑point
 # ---------------------------------------------------------------------------
+
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Create code snapshot for LLMs.")
