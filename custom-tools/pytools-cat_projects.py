@@ -47,7 +47,6 @@ DEFAULT_IGNORES: Tuple[str, ...] = (
     ".mypy_cache",
     ".FOLDER",
     "node_modules",
-    "test",
     "demo",
     "legacy",
 )
