@@ -371,37 +371,47 @@ ve() {
 
 
 # Auto-activate venv associated with $PWD, else fallback to last venv
-{
-    assoc_file="$HOME/.venv_pdirs"
-    auto_venv=""
-    if [[ -f "$assoc_file" ]]; then
-        auto_venv=$(awk -F: -v d="$PWD" '$1==d{print $2}' "$assoc_file" | tail -n1)
-    fi
-    if [[ -n "$auto_venv" ]]; then
-        venv_dir="$HOME/venvs/venvs/$auto_venv"
-        if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
-            if source "$venv_dir/bin/activate" 2>/dev/null; then
-                c_green "[auto] Activated venv for $PWD: $auto_venv"
-            else
-                c_red "[auto] Failed to activate venv for $PWD: $auto_venv"
+# Only run when VENV_AUTO_ACTIVATE is set to on/1/true/yes (case-insensitive).
+if [[ -n "${VENV_AUTO_ACTIVATE:-}" ]]; then
+    _venv_auto_val=$(printf '%s' "$VENV_AUTO_ACTIVATE" | tr '[:upper:]' '[:lower:]')
+    case "$_venv_auto_val" in
+        on|1|true|yes)
+            assoc_file="$HOME/.venv_pdirs"
+            auto_venv=""
+            if [[ -f "$assoc_file" ]]; then
+                auto_venv=$(awk -F: -v d="$PWD" '$1==d{print $2}' "$assoc_file" | tail -n1)
             fi
-        else
-            c_red "[auto] Venv directory or activate script missing for $auto_venv"
-        fi
-    elif [[ -f "$HOME/.last_venv" ]]; then
-        last_venv=$(<"$HOME/.last_venv")
-        venv_dir="$HOME/venvs/venvs/$last_venv"
-        if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
-            if source "$venv_dir/bin/activate" 2>/dev/null; then
-                c_green "[auto] Activated last venv: $last_venv"
-            else
-                c_red "[auto] Failed to activate last venv: $last_venv"
+            if [[ -n "$auto_venv" ]]; then
+                venv_dir="$HOME/venvs/venvs/$auto_venv"
+                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                        c_green "[auto] Activated venv for $PWD: $auto_venv"
+                    else
+                        c_red "[auto] Failed to activate venv for $PWD: $auto_venv"
+                    fi
+                else
+                    c_red "[auto] Venv directory or activate script missing for $auto_venv"
+                fi
+            elif [[ -f "$HOME/.last_venv" ]]; then
+                last_venv=$(<"$HOME/.last_venv")
+                venv_dir="$HOME/venvs/venvs/$last_venv"
+                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                        c_green "[auto] Activated last venv: $last_venv"
+                    else
+                        c_red "[auto] Failed to activate last venv: $last_venv"
+                    fi
+                else
+                    c_red "[auto] Last venv directory or activate script missing: $last_venv"
+                fi
             fi
-        else
-            c_red "[auto] Last venv directory or activate script missing: $last_venv"
-        fi
-    fi
-}
+            ;;
+        *)
+            # VENV_AUTO_ACTIVATE set but not truthy -> skip auto-activation
+            ;;
+    esac
+    unset _venv_auto_val
+fi
 
 
 alias atv='ve activate'
