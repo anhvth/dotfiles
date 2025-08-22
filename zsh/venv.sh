@@ -138,7 +138,18 @@ venv-activate() {
     [[ ! -f "$activate" ]] && c_red "No activate script: $activate" && return 1
     set_env VIRTUAL_ENV "$realpath"
     echo "$name" > "$HOME/.last_venv"
-    # Store PWD-to-venv association
+    
+    # Store PWD-to-venv association in new atv_history format
+    local atv_history_file="$HOME/.config/atv_history"
+    mkdir -p "$(dirname "$atv_history_file")"
+    
+    # Remove any previous entry for this PWD
+    if [[ -f "$atv_history_file" ]]; then
+        grep -v "^$PWD:" "$atv_history_file" > "$atv_history_file.tmp" && mv "$atv_history_file.tmp" "$atv_history_file"
+    fi
+    echo "$PWD:$name" >> "$atv_history_file"
+    
+    # Also maintain old format for backward compatibility
     local assoc_file="$HOME/.venv_pdirs"
     local pwd_escaped
     pwd_escaped=$(printf '%s' "$PWD" | sed 's/\//\\\//g')
@@ -147,6 +158,7 @@ venv-activate() {
         grep -v "^$PWD:" "$assoc_file" > "$assoc_file.tmp" && mv "$assoc_file.tmp" "$assoc_file"
     fi
     echo "$PWD:$name" >> "$assoc_file"
+    
     source "$activate" 2>/dev/null || { c_red "Failed to activate: $activate"; return 1; }
     c_green "Activated: $(basename "$realpath")"
 }
@@ -314,18 +326,28 @@ Virtual Environment Management (ve) - Commands:
   ve run <cmd>...               Run command in active venv
   ve help                       Show this help
 
+ATV History Commands:
+  atv-history                   Show directory -> environment mappings
+  atv-clear-history             Clear all atv history
+
 Aliases:
   create_env <name> [options]   Same as 've create'
-  atv <name>                    Same as 've activate'
+  atv <name>                    Same as 've activate' (with auto-directory mapping)
   veremove <name>               Same as 've remove'
   veremoveallexceptbase         Same as 've remove-all-except-base'
 
+Auto-Activation:
+  When you use 'atv <name>' to activate an environment, the current directory
+  is mapped to that environment. When you 'cd' to that directory later,
+  the environment will be automatically activated.
+
 Examples:
   ve create myproject --python=3.12
-  ve activate myproject
-  ve install numpy pandas
-  ve info
-  ve deactivate
+  cd /path/to/myproject
+  atv myproject                 # Creates directory mapping
+  cd elsewhere
+  cd /path/to/myproject         # Automatically activates myproject
+  atv-history                   # Show all directory mappings
 EOF
 }
 
@@ -337,6 +359,40 @@ venv-remove-all-except-base() {
         [[ "$name" == "base" ]] && continue
         [[ -d "$v" && -f "$v/bin/activate" ]] && venv-delete "$name"
     done
+}
+
+# Show atv history (directory -> environment mappings)
+atv-history() {
+    local atv_history_file="$HOME/.config/atv_history"
+    if [[ ! -f "$atv_history_file" ]]; then
+        c_yellow "No atv history file found: $atv_history_file"
+        return 0
+    fi
+    
+    if [[ ! -s "$atv_history_file" ]]; then
+        c_yellow "atv history is empty"
+        return 0
+    fi
+    
+    c_blue "Directory -> Environment mappings:"
+    while IFS=: read -r dir env; do
+        if [[ "$PWD" == "$dir" ]]; then
+            c_green "* $dir -> $env (current)"
+        else
+            echo "  $dir -> $env"
+        fi
+    done < "$atv_history_file"
+}
+
+# Clear atv history
+atv-clear-history() {
+    local atv_history_file="$HOME/.config/atv_history"
+    if [[ -f "$atv_history_file" ]]; then
+        rm "$atv_history_file"
+        c_green "Cleared atv history"
+    else
+        c_yellow "No atv history file to clear"
+    fi
 }
 
 ve() {
@@ -364,10 +420,62 @@ ve() {
         search) ve-search "$@" ;;
         update) ve-update "$@" ;;
         run) ve-run "$@" ;;
+        history) atv-history ;;
+        clear-history) atv-clear-history ;;
         *) c_red "Unknown command: $cmd"; venv-help ;;
     esac
 }
 
+
+
+# Auto-activate venv when changing directories based on atv_history
+_atv_auto_activate() {
+    local atv_history_file="$HOME/.config/atv_history"
+    local current_venv_name=""
+    
+    # Get current active venv name if any
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        current_venv_name=$(basename "$VIRTUAL_ENV")
+    fi
+    
+    # Check if there's a known environment for current directory
+    if [[ -f "$atv_history_file" ]]; then
+        local target_venv
+        target_venv=$(awk -F: -v d="$PWD" '$1==d{print $2}' "$atv_history_file" | tail -n1)
+        
+        if [[ -n "$target_venv" ]]; then
+            # Check if we need to switch environments
+            if [[ "$current_venv_name" != "$target_venv" ]]; then
+                local venv_dir="$VENV_ROOT_DIR/venvs/$target_venv"
+                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+                    # Deactivate current environment if active
+                    if [[ -n "$VIRTUAL_ENV" ]]; then
+                        deactivate 2>/dev/null || true
+                    fi
+                    
+                    # Activate the target environment
+                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                        set_env VIRTUAL_ENV "$venv_dir"
+                        c_green "[auto] Switched to venv for $PWD: $target_venv"
+                    else
+                        c_red "[auto] Failed to activate venv for $PWD: $target_venv"
+                    fi
+                else
+                    c_yellow "[auto] Venv directory missing for $target_venv (removing from history)"
+                    # Remove the invalid entry
+                    grep -v "^$PWD:" "$atv_history_file" > "$atv_history_file.tmp" && mv "$atv_history_file.tmp" "$atv_history_file"
+                fi
+            fi
+        fi
+    fi
+}
+
+# Set up directory change hook for zsh
+if [[ -n "$ZSH_VERSION" ]]; then
+    # Add our function to chpwd_functions array
+    autoload -U add-zsh-hook
+    add-zsh-hook chpwd _atv_auto_activate
+fi
 
 
 # Auto-activate venv associated with $PWD, else fallback to last venv
