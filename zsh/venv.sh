@@ -4,7 +4,6 @@
 
 
 ### VENV - Optimized version with comprehensive environment management
-VENV_ROOT_DIR=$HOME/venvs
 export PATH=$PATH:$HOME/.local/bin/
 # Helper function to set environment variables
 set_env() {
@@ -47,29 +46,53 @@ c_blue()  { echo -e "\033[34m$1\033[0m"; }
 
 venv-create() {
     local venv_name=$1; shift
-    local base="$VENV_ROOT_DIR/venvs"
-    local venv_path="$base/$venv_name"
+    local venv_path=".venv"
     local extra=("$@")
 
     [[ -z "$venv_name" ]] && c_red "Usage: venv-create <name> [--python=3.12]" && return 1
     [[ ! "$venv_name" =~ ^[a-zA-Z0-9_-]+$ ]] && c_red "Invalid name: $venv_name" && return 1
+    
+    # Check if .venv already exists in current directory
     if [[ -d "$venv_path" ]]; then
         c_yellow "Virtual environment already exists: $venv_path"
-        printf "Overwrite %s? [y/N] " "$venv_name"
+        printf "Overwrite .venv? [y/N] "
         read -r _c
         case "$_c" in
             y|Y)
-                c_yellow "Removing existing venv: $venv_name"
+                c_yellow "Removing existing .venv"
                 /bin/rm -rf "$venv_path"
                 ;;
             *)
-                c_yellow "Cancelled. Not overwriting $venv_name."
+                c_yellow "Cancelled. Not overwriting .venv."
                 return 1
                 ;;
         esac
     fi
-    # Ensure base directory exists
-    /bin/mkdir -p "$base" || { c_red "Failed to create directory: $base"; return 1; }
+    
+    # Check if environment name already exists in global tracking
+    local global_env_file="$HOME/.venv_all_env"
+    if [[ -f "$global_env_file" ]]; then
+        local existing_path
+        existing_path=$(awk -v env="$venv_name" '$1==env{print $2}' "$global_env_file")
+        if [[ -n "$existing_path" ]]; then
+            local existing_venv_dir=$(dirname "$(dirname "$existing_path")")
+            c_yellow "Environment name '$venv_name' already tracked at: $existing_venv_dir"
+            printf "Overwrite tracking for '%s'? [y/N] " "$venv_name"
+            read -r _c
+            case "$_c" in
+                y|Y)
+                    c_yellow "Will overwrite tracking for: $venv_name"
+                    # Remove from global tracking (will be re-added later)
+                    grep -v "^$venv_name " "$global_env_file" > "$global_env_file.tmp" && mv "$global_env_file.tmp" "$global_env_file"
+                    ;;
+                *)
+                    c_yellow "Cancelled. Environment name already in use."
+                    return 1
+                    ;;
+            esac
+        fi
+    fi
+    
     c_blue "Creating venv: $venv_name ${extra[*]}"
 
     # Try uv first
@@ -79,12 +102,26 @@ venv-create() {
         c_blue "Found uv, attempting to create venv..."
         if "$uv_path" venv "${extra[@]}" "$venv_path"; then
             c_green "Created with uv: $venv_path"
+            
+            # Register in global tracking
+            local activate_script="$PWD/$venv_path/bin/activate"
+            mkdir -p "$(dirname "$global_env_file")"
+            echo "$venv_name $activate_script" >> "$global_env_file"
+            c_blue "Registered $venv_name in global tracking"
+            
             venv-activate "$venv_name"
             return 0
         else
             c_yellow "uv failed, trying to install Python and retry..."
             if "$uv_path" python install && "$uv_path" venv "${extra[@]}" "$venv_path"; then
                 c_green "Created with uv (after Python install): $venv_path"
+                
+                # Register in global tracking
+                local activate_script="$PWD/$venv_path/bin/activate"
+                mkdir -p "$(dirname "$global_env_file")"
+                echo "$venv_name $activate_script" >> "$global_env_file"
+                c_blue "Registered $venv_name in global tracking"
+                
                 venv-activate "$venv_name"
                 return 0
             fi
@@ -98,6 +135,13 @@ venv-create() {
         [[ ${#extra[@]} -gt 0 ]] && c_yellow "Extra args ignored for python3: ${extra[*]}"
         if "$py3_path" -m venv "$venv_path"; then
             c_green "Created with python3: $venv_path"
+            
+            # Register in global tracking
+            local activate_script="$PWD/$venv_path/bin/activate"
+            mkdir -p "$(dirname "$global_env_file")"
+            echo "$venv_name $activate_script" >> "$global_env_file"
+            c_blue "Registered $venv_name in global tracking"
+            
             venv-activate "$venv_name"
             return 0
         fi
@@ -110,6 +154,13 @@ venv-create() {
         [[ ${#extra[@]} -gt 0 ]] && c_yellow "Extra args ignored for python: ${extra[*]}"
         if "$py_path" -m venv "$venv_path"; then
             c_green "Created with python: $venv_path"
+            
+            # Register in global tracking
+            local activate_script="$PWD/$venv_path/bin/activate"
+            mkdir -p "$(dirname "$global_env_file")"
+            echo "$venv_name $activate_script" >> "$global_env_file"
+            c_blue "Registered $venv_name in global tracking"
+            
             venv-activate "$venv_name"
             return 0
         fi
@@ -121,19 +172,29 @@ venv-create() {
 
 
 venv-activate() {
-    local name=$1 base="$VENV_ROOT_DIR/venvs" realpath activate
+    local name=$1 activate realpath
     [[ -z "$name" ]] && c_red "Usage: venv-activate <name|path>" && venv-list && return 1
-    if [[ ! "$name" == */* && -d "$base/$name" ]]; then
-        realpath=$(realpath "$base/$name")
-        activate="$realpath/bin/activate"
-    elif [[ -d "$name" && -f "$name/bin/activate" ]]; then
+    
+    # First check if it's a direct path to venv or activate script
+    if [[ -d "$name" && -f "$name/bin/activate" ]]; then
         realpath=$(realpath "$name")
         activate="$realpath/bin/activate"
     elif [[ -f "$name" ]]; then
         activate=$(realpath "$name")
         realpath=$(dirname "$(dirname "$activate")")
     else
-        c_red "Invalid venv: $name"; venv-list; return 1
+        # Look up in global tracking file
+        local global_env_file="$HOME/.venv_all_env"
+        if [[ -f "$global_env_file" ]]; then
+            activate=$(awk -v env="$name" '$1==env{print $2}' "$global_env_file")
+            if [[ -n "$activate" && -f "$activate" ]]; then
+                realpath=$(dirname "$(dirname "$activate")")
+            else
+                c_red "Environment '$name' not found in global tracking"; venv-list; return 1
+            fi
+        else
+            c_red "No global environment tracking file found and '$name' is not a valid path"; return 1
+        fi
     fi
     [[ ! -f "$activate" ]] && c_red "No activate script: $activate" && return 1
     set_env VIRTUAL_ENV "$realpath"
@@ -170,40 +231,94 @@ venv-deactivate() {
 
 # List all virtual environments
 venv-list() {
-    local base="$VENV_ROOT_DIR/venvs"; [[ ! -d "$base" ]] && c_yellow "No venv dir: $base" && return 1
-    local envs=() v
-    for v in "$base"/*/; do [[ -d "$v" && -f "$v/bin/activate" ]] && envs+=("$(basename "$v")"); done
-    [[ ${#envs[@]} -eq 0 ]] && c_yellow "No venvs in $base" && return 0
-    c_blue "Envs in $base:"; for e in "${envs[@]}"; do [[ "$VIRTUAL_ENV" == "$base/$e"* ]] && c_green "* $e (active)" || echo "  $e"; done
+    local global_env_file="$HOME/.venv_all_env"
+    
+    if [[ ! -f "$global_env_file" ]]; then
+        c_yellow "No global environment tracking file found: $global_env_file"
+        return 0
+    fi
+    
+    if [[ ! -s "$global_env_file" ]]; then
+        c_yellow "No virtual environments tracked in $global_env_file"
+        return 0
+    fi
+    
+    c_blue "Tracked virtual environments:"
+    local count=0
+    while IFS=' ' read -r env_name activate_path; do
+        [[ -z "$env_name" || -z "$activate_path" ]] && continue
+        
+        local venv_path=$(dirname "$(dirname "$activate_path")")
+        
+        # Check if environment still exists
+        if [[ -f "$activate_path" ]]; then
+            if [[ -n "$VIRTUAL_ENV" && "$VIRTUAL_ENV" == "$venv_path" ]]; then
+                c_green "* $env_name (active) - $venv_path"
+            else
+                echo "  $env_name - $venv_path"
+            fi
+            ((count++))
+        else
+            c_yellow "  $env_name - $venv_path (missing)"
+        fi
+    done < "$global_env_file"
+    
+    if [[ $count -eq 0 ]]; then
+        c_yellow "No valid virtual environments found"
+    fi
 }
 
 # Delete a virtual environment
 venv-delete() {
     local n="$1"
-    local base="$VENV_ROOT_DIR/venvs"
-    local path="$base/$n"
     shift
     if [[ $# -gt 0 ]]; then
         c_red "Error: venv-delete only accepts one argument (the venv name). Extra args: $*"
         return 1
     fi
     [[ -z "$n" ]] && c_red "Usage: venv-delete <name>" && venv-list && return 1
-    [[ ! -d "$path" ]] && c_red "No venv: $n" && venv-list && return 1
+    
+    # Find the environment in global tracking
+    local global_env_file="$HOME/.venv_all_env"
+    local activate_path
+    if [[ -f "$global_env_file" ]]; then
+        activate_path=$(awk -v env="$n" '$1==env{print $2}' "$global_env_file")
+    fi
+    
+    if [[ -z "$activate_path" ]]; then
+        c_red "Environment '$n' not found in global tracking"
+        venv-list
+        return 1
+    fi
+    
+    local path=$(dirname "$(dirname "$activate_path")")
+    
     [[ -n "$VIRTUAL_ENV" && "$VIRTUAL_ENV" == "$path" ]] && c_red "Cannot delete active venv: $n" && return 1
+    
     # Safety: never allow empty, /, or $HOME as a deletion target
     if [[ -z "$path" || "$path" == "/" || "$path" == "$HOME" ]]; then
         c_red "Refusing to delete unsafe path: '$path'"
         return 1
     fi
-    if [[ ! -d "$path" || ! -f "$path/bin/activate" ]]; then
+    
+    if [[ ! -d "$path" || ! -f "$activate_path" ]]; then
         c_red "Refusing to delete: '$path' is not a valid venv directory"
         return 1
     fi
-    printf "Delete %s? [y/N] " "$n"
+    
+    printf "Delete %s at %s? [y/N] " "$n" "$path"
     read -r _c
     case "$_c" in
         y|Y)
-            /bin/rm -rf "$path" && c_green "Deleted: $n" || c_red "Failed to delete: $n"
+            if /bin/rm -rf "$path"; then
+                # Remove from global tracking file
+                if [[ -f "$global_env_file" ]]; then
+                    grep -v "^$n " "$global_env_file" > "$global_env_file.tmp" && mv "$global_env_file.tmp" "$global_env_file"
+                fi
+                c_green "Deleted: $n ($path)"
+            else
+                c_red "Failed to delete: $n"
+            fi
             ;;
         *)
             c_yellow "Cancelled"
@@ -233,10 +348,23 @@ venv-info() {
 }
 
 venv-which() {
-    local name=$1 base="$VENV_ROOT_DIR/venvs"
+    local name=$1
     [[ -z "$name" ]] && c_red "Usage: venv-which <name>" && return 1
-    local path="$base/$name"
-    [[ -d "$path" && -f "$path/bin/activate" ]] && c_blue "Would activate: $path" || c_red "No venv: $name"
+    
+    # Look up in global tracking file
+    local global_env_file="$HOME/.venv_all_env"
+    if [[ -f "$global_env_file" ]]; then
+        local activate_path
+        activate_path=$(awk -v env="$name" '$1==env{print $2}' "$global_env_file")
+        if [[ -n "$activate_path" && -f "$activate_path" ]]; then
+            local venv_path=$(dirname "$(dirname "$activate_path")")
+            c_blue "Would activate: $venv_path"
+        else
+            c_red "Environment '$name' not found in global tracking"
+        fi
+    else
+        c_red "No global environment tracking file found"
+    fi
 }
 
 venv-install() {
@@ -352,13 +480,41 @@ EOF
 }
 
 venv-remove-all-except-base() {
-    local base="$VENV_ROOT_DIR/venvs"
-    local v
-    for v in "$base"/*/; do
-        local name="$(basename "$v")"
-        [[ "$name" == "base" ]] && continue
-        [[ -d "$v" && -f "$v/bin/activate" ]] && venv-delete "$name"
+    local global_env_file="$HOME/.venv_all_env"
+    if [[ ! -f "$global_env_file" ]]; then
+        c_yellow "No global environment tracking file found"
+        return 0
+    fi
+    
+    local envs_to_delete=()
+    while IFS=' ' read -r env_name activate_path; do
+        [[ -z "$env_name" || -z "$activate_path" ]] && continue
+        [[ "$env_name" == "base" ]] && continue
+        envs_to_delete+=("$env_name")
+    done < "$global_env_file"
+    
+    if [[ ${#envs_to_delete[@]} -eq 0 ]]; then
+        c_yellow "No environments to delete (only 'base' environments are preserved)"
+        return 0
+    fi
+    
+    c_blue "Will delete ${#envs_to_delete[@]} environments (preserving 'base'):"
+    for env in "${envs_to_delete[@]}"; do
+        echo "  $env"
     done
+    
+    printf "Continue? [y/N] "
+    read -r _c
+    case "$_c" in
+        y|Y)
+            for env in "${envs_to_delete[@]}"; do
+                venv-delete "$env"
+            done
+            ;;
+        *)
+            c_yellow "Cancelled"
+            ;;
+    esac
 }
 
 # Show atv history (directory -> environment mappings)
@@ -446,22 +602,30 @@ _atv_auto_activate() {
         if [[ -n "$target_venv" ]]; then
             # Check if we need to switch environments
             if [[ "$current_venv_name" != "$target_venv" ]]; then
-                local venv_dir="$VENV_ROOT_DIR/venvs/$target_venv"
-                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
+                # Look up environment in global tracking
+                local global_env_file="$HOME/.venv_all_env"
+                local activate_path
+                if [[ -f "$global_env_file" ]]; then
+                    activate_path=$(awk -v env="$target_venv" '$1==env{print $2}' "$global_env_file")
+                fi
+                
+                if [[ -n "$activate_path" && -f "$activate_path" ]]; then
+                    local venv_dir=$(dirname "$(dirname "$activate_path")")
+                    
                     # Deactivate current environment if active
                     if [[ -n "$VIRTUAL_ENV" ]]; then
                         deactivate 2>/dev/null || true
                     fi
                     
                     # Activate the target environment
-                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                    if source "$activate_path" 2>/dev/null; then
                         set_env VIRTUAL_ENV "$venv_dir"
                         c_green "[auto] Switched to venv for $PWD: $target_venv"
                     else
                         c_red "[auto] Failed to activate venv for $PWD: $target_venv"
                     fi
                 else
-                    c_yellow "[auto] Venv directory missing for $target_venv (removing from history)"
+                    c_yellow "[auto] Venv not found in global tracking for $target_venv (removing from history)"
                     # Remove the invalid entry
                     grep -v "^$PWD:" "$atv_history_file" > "$atv_history_file.tmp" && mv "$atv_history_file.tmp" "$atv_history_file"
                 fi
@@ -490,27 +654,43 @@ if [[ -n "${VENV_AUTO_ACTIVATE:-}" ]]; then
                 auto_venv=$(awk -F: -v d="$PWD" '$1==d{print $2}' "$assoc_file" | tail -n1)
             fi
             if [[ -n "$auto_venv" ]]; then
-                venv_dir="$HOME/venvs/venvs/$auto_venv"
-                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
-                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                # Look up in global tracking file
+                local global_env_file="$HOME/.venv_all_env"
+                local activate_path
+                if [[ -f "$global_env_file" ]]; then
+                    activate_path=$(awk -v env="$auto_venv" '$1==env{print $2}' "$global_env_file")
+                fi
+                
+                if [[ -n "$activate_path" && -f "$activate_path" ]]; then
+                    local venv_dir=$(dirname "$(dirname "$activate_path")")
+                    if source "$activate_path" 2>/dev/null; then
+                        set_env VIRTUAL_ENV "$venv_dir"
                         c_green "[auto] Activated venv for $PWD: $auto_venv"
                     else
                         c_red "[auto] Failed to activate venv for $PWD: $auto_venv"
                     fi
                 else
-                    c_red "[auto] Venv directory or activate script missing for $auto_venv"
+                    c_red "[auto] Venv not found in global tracking: $auto_venv"
                 fi
             elif [[ -f "$HOME/.last_venv" ]]; then
                 last_venv=$(<"$HOME/.last_venv")
-                venv_dir="$HOME/venvs/venvs/$last_venv"
-                if [[ -d "$venv_dir" && -f "$venv_dir/bin/activate" ]]; then
-                    if source "$venv_dir/bin/activate" 2>/dev/null; then
+                # Look up in global tracking file
+                local global_env_file="$HOME/.venv_all_env"
+                local activate_path
+                if [[ -f "$global_env_file" ]]; then
+                    activate_path=$(awk -v env="$last_venv" '$1==env{print $2}' "$global_env_file")
+                fi
+                
+                if [[ -n "$activate_path" && -f "$activate_path" ]]; then
+                    local venv_dir=$(dirname "$(dirname "$activate_path")")
+                    if source "$activate_path" 2>/dev/null; then
+                        set_env VIRTUAL_ENV "$venv_dir"
                         c_green "[auto] Activated last venv: $last_venv"
                     else
                         c_red "[auto] Failed to activate last venv: $last_venv"
                     fi
                 else
-                    c_red "[auto] Last venv directory or activate script missing: $last_venv"
+                    c_red "[auto] Last venv not found in global tracking: $last_venv"
                 fi
             fi
             ;;
