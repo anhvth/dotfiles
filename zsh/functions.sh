@@ -380,6 +380,49 @@ unset_env() {
 	fi
 }
 
+# Virtualenv auto-activation toggles
+ve_auto_chdir() {
+    local mode="$1"
+    if [[ -z "$mode" ]]; then
+        local eff=$(print -r -- ${VENV_AUTO_CHDIR:-on})
+        echo "VENV_AUTO_CHDIR=${eff} (default on). Usage: ve_auto_chdir on|off"
+        return 0
+    fi
+    case "${mode:l}" in
+        on|1|true|yes)
+            set_env VENV_AUTO_CHDIR on
+            echo "Enabled cd-based auto-activation (VENV_AUTO_CHDIR=on)."
+            ;;
+        off|0|false|no)
+            set_env VENV_AUTO_CHDIR off
+            echo "Disabled cd-based auto-activation (VENV_AUTO_CHDIR=off)."
+            ;;
+        *)
+            echo "Usage: ve_auto_chdir on|off"; return 1;;
+    esac
+}
+
+ve_auto_login() {
+    local mode="$1"
+    if [[ -z "$mode" ]]; then
+        local eff=$(print -r -- ${VENV_AUTO_ACTIVATE:-off})
+        echo "VENV_AUTO_ACTIVATE=${eff} (default off). Usage: ve_auto_login on|off"
+        return 0
+    fi
+    case "${mode:l}" in
+        on|1|true|yes)
+            set_env VENV_AUTO_ACTIVATE on
+            echo "Enabled login-time auto-activation (VENV_AUTO_ACTIVATE=on)."
+            ;;
+        off|0|false|no)
+            unset_env VENV_AUTO_ACTIVATE
+            echo "Disabled login-time auto-activation (unset VENV_AUTO_ACTIVATE)."
+            ;;
+        *)
+            echo "Usage: ve_auto_login on|off"; return 1;;
+    esac
+}
+
 # Alias management
 set_alias() {
 	local aliasname=$1

@@ -585,9 +585,23 @@ ve() {
 
 
 # Auto-activate venv when changing directories based on atv_history
+# Toggle controls:
+#   - VENV_AUTO_CHDIR: on|1|true|yes to enable, off|0|false|no to disable.
+#                      Default: on (enabled). Checked on every directory change.
+#   - VENV_AUTO_ACTIVATE: on|1|true|yes to attempt activation once at shell start.
+#                         Default: unset (disabled). Only acted upon at login if set.
 _atv_auto_activate() {
     local atv_history_file="$HOME/.config/atv_history"
     local current_venv_name=""
+
+    # Respect toggle for cd-based auto activation (defaults to on)
+    local _auto_cd_val
+    _auto_cd_val=$(printf '%s' "${VENV_AUTO_CHDIR:-on}" | tr '[:upper:]' '[:lower:]')
+    case "$_auto_cd_val" in
+        off|0|false|no)
+            return
+            ;;
+    esac
     
     # Get current active venv name if any
     if [[ -n "$VIRTUAL_ENV" ]]; then

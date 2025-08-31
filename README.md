@@ -3,6 +3,33 @@
 git clone https://github.com/anhvth/dotfiles ~/dotfiles --single-branch && cd ~/dotfiles && ./setup.sh
 
 ```
+## Python venv auto-activation
+
+- cd-based auto-activation is enabled by default. Toggle it via helpers (writes to `~/.env`):
+
+```bash
+# Disable auto-activate on cd
+ve_auto_chdir off
+
+# Re-enable
+ve_auto_chdir on
+```
+
+- Login-time auto-activation (activate mapped or last venv at shell start) is off by default. Enable/disable:
+
+```bash
+# Enable login-time auto-activation
+ve_auto_login on
+
+# Disable (unset)
+ve_auto_login off
+```
+
+Notes:
+- `ve_auto_chdir` controls activation on directory change using mappings from `atv <name>`.
+- `ve_auto_login` controls one-time activation at shell startup.
+- Reload with `source ~/.zshrc` to apply immediately in the current shell.
+
 
 
 # Alias only
