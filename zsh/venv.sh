@@ -46,24 +46,24 @@ c_blue()  { echo -e "\033[34m$1\033[0m"; }
 
 venv-create() {
     local venv_name=$1; shift
-    local venv_path=".venv"
+    local venv_path="$HOME/.venvs/$venv_name"
     local extra=("$@")
 
     [[ -z "$venv_name" ]] && c_red "Usage: venv-create <name> [--python=3.12]" && return 1
     [[ ! "$venv_name" =~ ^[a-zA-Z0-9_-]+$ ]] && c_red "Invalid name: $venv_name" && return 1
     
-    # Check if .venv already exists in current directory
+    # Check if venv already exists in ~/.venvs
     if [[ -d "$venv_path" ]]; then
         c_yellow "Virtual environment already exists: $venv_path"
-        printf "Overwrite .venv? [y/N] "
+        printf "Overwrite $venv_path? [y/N] "
         read -r _c
         case "$_c" in
             y|Y)
-                c_yellow "Removing existing .venv"
+                c_yellow "Removing existing $venv_path"
                 /bin/rm -rf "$venv_path"
                 ;;
             *)
-                c_yellow "Cancelled. Not overwriting .venv."
+                c_yellow "Cancelled. Not overwriting $venv_path."
                 return 1
                 ;;
         esac
@@ -93,7 +93,7 @@ venv-create() {
         fi
     fi
     
-    c_blue "Creating venv: $venv_name ${extra[*]}"
+    c_blue "Creating venv: $venv_name at $venv_path ${extra[*]}"
 
     # Try uv first
     local uv_path
@@ -104,7 +104,7 @@ venv-create() {
             c_green "Created with uv: $venv_path"
             
             # Register in global tracking
-            local activate_script="$PWD/$venv_path/bin/activate"
+            local activate_script="$venv_path/bin/activate"
             mkdir -p "$(dirname "$global_env_file")"
             echo "$venv_name $activate_script" >> "$global_env_file"
             c_blue "Registered $venv_name in global tracking"
@@ -117,7 +117,7 @@ venv-create() {
                 c_green "Created with uv (after Python install): $venv_path"
                 
                 # Register in global tracking
-                local activate_script="$PWD/$venv_path/bin/activate"
+                local activate_script="$venv_path/bin/activate"
                 mkdir -p "$(dirname "$global_env_file")"
                 echo "$venv_name $activate_script" >> "$global_env_file"
                 c_blue "Registered $venv_name in global tracking"
@@ -137,7 +137,7 @@ venv-create() {
             c_green "Created with python3: $venv_path"
             
             # Register in global tracking
-            local activate_script="$PWD/$venv_path/bin/activate"
+            local activate_script="$venv_path/bin/activate"
             mkdir -p "$(dirname "$global_env_file")"
             echo "$venv_name $activate_script" >> "$global_env_file"
             c_blue "Registered $venv_name in global tracking"
@@ -156,7 +156,7 @@ venv-create() {
             c_green "Created with python: $venv_path"
             
             # Register in global tracking
-            local activate_script="$PWD/$venv_path/bin/activate"
+            local activate_script="$venv_path/bin/activate"
             mkdir -p "$(dirname "$global_env_file")"
             echo "$venv_name $activate_script" >> "$global_env_file"
             c_blue "Registered $venv_name in global tracking"
@@ -190,10 +190,22 @@ venv-activate() {
             if [[ -n "$activate" && -f "$activate" ]]; then
                 realpath=$(dirname "$(dirname "$activate")")
             else
-                c_red "Environment '$name' not found in global tracking"; venv-list; return 1
+                # Try ~/.venvs/<name>
+                if [[ -d "$HOME/.venvs/$name" && -f "$HOME/.venvs/$name/bin/activate" ]]; then
+                    realpath="$HOME/.venvs/$name"
+                    activate="$HOME/.venvs/$name/bin/activate"
+                else
+                    c_red "Environment '$name' not found in global tracking or ~/.venvs/$name"; venv-list; return 1
+                fi
             fi
         else
-            c_red "No global environment tracking file found and '$name' is not a valid path"; return 1
+            # Try ~/.venvs/<name>
+            if [[ -d "$HOME/.venvs/$name" && -f "$HOME/.venvs/$name/bin/activate" ]]; then
+                realpath="$HOME/.venvs/$name"
+                activate="$HOME/.venvs/$name/bin/activate"
+            else
+                c_red "No global environment tracking file found and '$name' is not a valid path or ~/.venvs/$name does not exist"; return 1
+            fi
         fi
     fi
     [[ ! -f "$activate" ]] && c_red "No activate script: $activate" && return 1
@@ -433,6 +445,25 @@ ve-run() {
     "$@"
 }
 
+# Auto-activation toggle function
+venv-autoatv() {
+    local state="$1"
+    case "$state" in
+        on)
+            set_env VENV_AUTO_ACTIVATE on
+            c_green "Enabled login-time auto-activation (VENV_AUTO_ACTIVATE=on)."
+            ;;
+        off)
+            unset VENV_AUTO_ACTIVATE
+            c_yellow "Disabled login-time auto-activation."
+            ;;
+        *)
+            c_red "Usage: ve autoatv on|off"
+            return 1
+            ;;
+    esac
+}
+
 # Help function for the ve command
 venv-help() {
     cat << 'EOF'
@@ -452,6 +483,7 @@ Virtual Environment Management (ve) - Commands:
   ve search <pkg>               Search for packages
   ve update <pkg>...            Update packages in active venv
   ve run <cmd>...               Run command in active venv
+  ve autoatv on|off             Toggle login-time auto-activation
   ve help                       Show this help
 
 ATV History Commands:
@@ -576,6 +608,7 @@ ve() {
         search) ve-search "$@" ;;
         update) ve-update "$@" ;;
         run) ve-run "$@" ;;
+        autoatv) venv-autoatv "$@" ;;
         history) atv-history ;;
         clear-history) atv-clear-history ;;
         *) c_red "Unknown command: $cmd"; venv-help ;;
