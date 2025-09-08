@@ -47,7 +47,6 @@ alias la="ls -A"
 alias l="ls -CF"
 
 # Image conversion alias
-alias convert_png2jpg="find ./ -name "*.png" | parallel "convert -quality 92 -sampling-factor 2x2,1x1,1x1 {.}.png {.}.jpg && rm {}""
 
 # SSH alias
 alias run-autossh="autossh -M 20000 -o ServerAliveInterval=5 -f -N"
