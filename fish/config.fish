@@ -129,13 +129,8 @@ if test "$FISH_MODE" = "fastest"
     end
     set FISH_LOAD_TIME (math "$FISH_END_TIME - $FISH_START_TIME")
     echo "⚡ Fish Fastest Mode Active ($FISH_LOAD_TIME ms)"
-    return
-end
 
-#============================================================================
-# BALANCED MODE - Optimized fish with key features
-#============================================================================
-if test "$FISH_MODE" = "balanced"
+else if test "$FISH_MODE" = "balanced"
     # Basic configuration
     set -g fish_greeting ""
     
@@ -187,12 +182,9 @@ if test "$FISH_MODE" = "balanced"
     end
     set FISH_LOAD_TIME (math "$FISH_END_TIME - $FISH_START_TIME")
     echo "⚖️  Fish Balanced Mode Active ($FISH_LOAD_TIME ms)"
-    return
-end
 
-#============================================================================
-# FULL MODE - All features with performance optimizations
-#============================================================================
+else
+    # FULL MODE - All features with performance optimizations
 # Basic Configuration
 set -g fish_greeting ""
 
@@ -262,3 +254,5 @@ set -g fish_history_max 10000
 
 # Disable fish greeting in all modes after first setup
 set -g fish_greeting ""
+
+end  # End of mode conditional block
