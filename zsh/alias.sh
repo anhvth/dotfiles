@@ -63,4 +63,8 @@ alias hf-down="pytools-hf-down.py"
 alias kill_process_grep="pytools-kill_process_grep.py"
 alias print-ipv4="pytools-print-ipv4.py"
 alias deit="docker exec -it"
-alias code="code-insiders"
+if command -v code-insiders >/dev/null 2>&1; then
+  alias code="code-insiders"
+else
+  alias code="code"
+fi

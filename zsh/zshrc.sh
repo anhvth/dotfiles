@@ -1,25 +1,181 @@
-#------------------------------------------
-# Theme and Oh-My-Zsh Setup
-#------------------------------------------
-# Fast startup mode (set ZSH_FAST_MODE=1 to enable minimal loading)
-if [[ "$ZSH_FAST_MODE" == "1" ]]; then
-    # Minimal setup for fastest startup
+#============================================================================
+# ZSH Performance Mode System
+# Modes: fastest, balanced, full
+# Use: zsh_toggle_mode to switch between modes
+#============================================================================
+
+# Determine current mode
+ZSH_MODE="${ZSH_MODE:-balanced}"  # Default to balanced mode
+ZSH_MODE_FILE="$HOME/.zsh_mode"
+
+# Load saved mode if exists
+[[ -f "$ZSH_MODE_FILE" ]] && ZSH_MODE="$(cat "$ZSH_MODE_FILE")"
+
+#============================================================================
+# Mode Toggle Function
+#============================================================================
+zsh_toggle_mode() {
+    local current_mode="$ZSH_MODE"
+    local new_mode
+    
+    case "$current_mode" in
+        fastest)  new_mode="balanced" ;;
+        balanced) new_mode="full" ;;
+        full)     new_mode="fastest" ;;
+        *)        new_mode="balanced" ;;
+    esac
+    
+    echo "$new_mode" > "$ZSH_MODE_FILE"
+    echo "🔄 Switching from $current_mode to $new_mode mode"
+    echo "💡 Restart your terminal or run: exec zsh"
+    
+    export ZSH_MODE="$new_mode"
+}
+
+# Also provide direct mode setting
+zsh_set_mode() {
+    local mode="$1"
+    if [[ "$mode" =~ ^(fastest|balanced|full)$ ]]; then
+        echo "$mode" > "$ZSH_MODE_FILE"
+        echo "✅ Set mode to: $mode"
+        echo "💡 Restart your terminal or run: exec zsh"
+        export ZSH_MODE="$mode"
+    else
+        echo "❌ Invalid mode. Use: fastest, balanced, or full"
+        echo "Current mode: $ZSH_MODE"
+    fi
+}
+
+#============================================================================
+# FASTEST MODE - Minimal setup for maximum speed
+#============================================================================
+if [[ "$ZSH_MODE" == "fastest" ]]; then
+    # Basic essentials only
     HISTFILE=$HOME/.zsh_history
-    SAVEHIST=1000
-    setopt inc_append_history share_history
+    SAVEHIST=5000
+    setopt inc_append_history share_history hist_ignore_dups
+    stty -ixon
     
-    # Basic path setup only
+    # Essential environment
+    export VISUAL=vim
+    export FUNCNEST=100000
+    
+    # Minimal path setup
     typeset -U path PATH
-    path=($HOME/dotfiles/custom-tools $HOME/.local/bin $path)
+    path=(
+        $HOME/dotfiles/custom-tools
+        $HOME/.local/bin
+        $path
+    )
     
-    # Load only essential aliases and functions
-    source ~/dotfiles/zsh/alias.sh
+    # Homebrew (macOS only)
+    [[ "$OSTYPE" == "darwin"* && -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
+    [[ "$OSTYPE" == "darwin"* && -d /usr/local/bin && ! -d /opt/homebrew/bin ]] && path=(/usr/local/bin $path)
     
-    # Simple prompt
-    PS1="fast|%~ %# "
+    # Load only critical files
+    [[ -r ~/.env ]] && source ~/.env
+    [[ -f ~/dotfiles/zsh/alias.sh ]] && source ~/dotfiles/zsh/alias.sh
+    
+    # Ultra-minimal prompt
+    PS1="⚡|%2~ %# "
+    
+    # Basic completion
+    autoload -Uz compinit && compinit -C
+    
+    echo "⚡ ZSH Fastest Mode Active"
     return
 fi
 
+#============================================================================
+# BALANCED MODE - Optimized oh-my-zsh with key features
+#============================================================================
+if [[ "$ZSH_MODE" == "balanced" ]]; then
+    # Performance optimizations from the article
+    DISABLE_AUTO_UPDATE="true"
+    DISABLE_MAGIC_FUNCTIONS="true" 
+    DISABLE_COMPFIX="true"
+    DISABLE_UNTRACKED_FILES_DIRTY="true"
+    
+    # Basic configuration
+    HISTFILE=$HOME/.zsh_history
+    SAVEHIST=10000
+    setopt inc_append_history share_history hist_ignore_dups
+    stty -ixon
+    
+    export VISUAL=vim
+    export FUNCNEST=100000
+    export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
+    
+    # Optimized path setup
+    typeset -U path PATH
+    path=(
+        $HOME/dotfiles/custom-tools
+        $HOME/.local/bin
+        $HOME/dotfiles/utils
+        $HOME/dotfiles/bin
+        $path
+    )
+    
+    # Homebrew paths (macOS only)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [[ -d /opt/homebrew/bin ]]; then
+            path=(/opt/homebrew/bin /opt/homebrew/sbin $path)
+        else
+            path=(/usr/local/bin /usr/local/sbin $path)
+        fi
+    fi
+    
+    # Smart completion initialization (once per day)
+    autoload -Uz compinit
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS version
+        if [[ $(date +'%j') != $(stat -f '%Sm' -t '%j' ~/.zcompdump 2>/dev/null) ]]; then
+            compinit
+        else
+            compinit -C
+        fi
+    else
+        # Linux version
+        if [[ $(date +'%j') != $(stat -c '%Y' ~/.zcompdump 2>/dev/null | xargs -I{} date -d @{} +'%j' 2>/dev/null) ]]; then
+            compinit
+        else
+            compinit -C
+        fi
+    fi
+    
+    # Theme setup
+    ZSH_THEME="robbyrussell"
+    
+    # Essential plugins only
+    plugins=(git)
+    
+    # Load oh-my-zsh
+    source $ZSH/oh-my-zsh.sh
+    
+    # Load essential configurations
+    [[ -r ~/.env ]] && source ~/.env
+    [[ -f ~/dotfiles/zsh/alias.sh ]] && source ~/dotfiles/zsh/alias.sh
+    [[ -f ~/dotfiles/zsh/functions.sh ]] && source ~/dotfiles/zsh/functions.sh
+    [[ -f ~/dotfiles/zsh/keybindings.sh ]] && source ~/dotfiles/zsh/keybindings.sh
+    
+    # Load autosuggestions if enabled
+    if [[ -f ~/.zsh_suggestions_enabled ]]; then
+        source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+        ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
+        ZSH_AUTOSUGGEST_USE_ASYNC=1
+    fi
+    
+    # Syntax highlighting last (for performance)
+    [[ -f $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+        source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    
+    echo "⚖️  ZSH Balanced Mode Active"
+    return
+fi
+
+#============================================================================
+# FULL MODE - All features with performance optimizations
+#============================================================================
 # Performance optimizations
 DISABLE_AUTO_UPDATE="true"
 DISABLE_MAGIC_FUNCTIONS="true"
@@ -27,35 +183,18 @@ DISABLE_COMPFIX="true"
 DISABLE_UNTRACKED_FILES_DIRTY="true"
 COMPLETION_WAITING_DOTS="false"
 
-# Use simple theme for faster startup
-ZSH_THEME="robbyrussell"
-export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
-
-
-#------------------------------------------
 # Basic Configuration
-#------------------------------------------
-# History settings
 HISTFILE=$HOME/.zsh_history
 SAVEHIST=10000
-setopt inc_append_history # To save every command before it is executed 
-setopt share_history # Share history between terminals
-stty -ixon # Disable terminal flow control (Ctrl+S, Ctrl+Q)
+setopt inc_append_history share_history hist_ignore_dups
+stty -ixon
 
-# Editor configuration
 export VISUAL=vim
-# VSCODE=code-insiders
-
-# Set FUNCNEST to prevent "maximum nested function level reached" errors
 export FUNCNEST=100000
+export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
 
-#------------------------------------------
-# Path Configuration
-#------------------------------------------
-# Use typeset for efficient path management and avoid duplicates
+# Full path configuration
 typeset -U path PATH
-
-# Add paths efficiently
 path=(
     $HOME/dotfiles/utils/ripgrep_all-v0.9.5-x86_64-unknown-linux-musl
     $HOME/dotfiles/utils
@@ -77,76 +216,50 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     fi
 fi
 
-#------------------------------------------
-# Environment and Config Sources
-#------------------------------------------
-# Source environment variables (only if file exists and is readable)
-[[ -r ~/.env ]] && source ~/.env
+# Optimized completion initialization
+autoload -Uz compinit
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS version
+    if [[ $(date +'%j') != $(stat -f '%Sm' -t '%j' ~/.zcompdump 2>/dev/null) ]]; then
+        compinit
+    else
+        compinit -C
+    fi
+else
+    # Linux version  
+    if [[ $(date +'%j') != $(stat -c '%Y' ~/.zcompdump 2>/dev/null | xargs -I{} date -d @{} +'%j' 2>/dev/null) ]]; then
+        compinit
+    else
+        compinit -C
+    fi
+fi
 
-# Source configuration files
-# Load oh-my-zsh with minimal features for speed
+# Theme
+ZSH_THEME="robbyrussell"
+
+# Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh
 
-# Load plugins conditionally
-source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
+# Load all configurations
+[[ -r ~/.env ]] && source ~/.env
+[[ -f $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh ]] && source $HOME/dotfiles/zsh/plugins/vi-mode.plugin.zsh
+[[ -f $HOME/dotfiles/zsh/keybindings.sh ]] && source $HOME/dotfiles/zsh/keybindings.sh
+[[ -f $HOME/dotfiles/zsh/plugins/fixls.zsh ]] && source $HOME/dotfiles/zsh/plugins/fixls.zsh
+[[ -f ~/dotfiles/zsh/alias.sh ]] && source ~/dotfiles/zsh/alias.sh
+[[ -f ~/dotfiles/zsh/functions.sh ]] && source ~/dotfiles/zsh/functions.sh
 
-# Load syntax highlighting last for better performance
-source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
-# Load custom configurations
-source $HOME/dotfiles/zsh/keybindings.sh
-source $HOME/dotfiles/zsh/plugins/fixls.zsh
-
-# Load aliases and functions (these are fast)
-source ~/dotfiles/zsh/alias.sh
-source ~/dotfiles/zsh/functions.sh
-# Load virtual environment functions (lazy load for speed)
-source $HOME/dotfiles/zsh/venv.sh
-
-#------------------------------------------
-# Performance Optimizations
-#------------------------------------------
-# Skip global compinit on Ubuntu for faster startup
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    skip_global_compinit=1
-fi
-
-# Lazy load heavier plugins/functions when first used
-if [[ -f ~/.zsh_suggestions_enabled ]]; then
+# Autosuggestions with performance settings
+if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+    ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
+    ZSH_AUTOSUGGEST_USE_ASYNC=1
 fi
 
-#------------------------------------------
-# Plugin Setup
-#------------------------------------------
-# Optimized compinit - only run once per day or when needed
-autoload -Uz compinit
-_comp_files=(${ZDOTDIR:-$HOME}/.zcompdump(Nm-20))
-if (( $#_comp_files )); then
-    compinit -C
-else
-    compinit
-    # Update timestamp
-    touch ${ZDOTDIR:-$HOME}/.zcompdump
-fi
-unset _comp_files
-# Plugin configuration
-# autoload -U compinit
-# plugins=(
-# 	docker 
-# )
+# Syntax highlighting (always last for performance)
+[[ -f $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+    source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-# for plugin ($plugins); do
-#     fpath=($HOME/dotfiles/zsh/plugins/oh-my-zsh/plugins/$plugin $fpath)
-# done
-
-# compinit
-
-
-#------------------------------------------
-# Key Bindings (Optimized)
-#------------------------------------------
-# Lazy load arrow key history search only when needed
+# Optimized history search
 _setup_history_search() {
     autoload -U up-line-or-beginning-search down-line-or-beginning-search
     zle -N up-line-or-beginning-search
@@ -155,9 +268,9 @@ _setup_history_search() {
     [[ -n "${terminfo[kcuu1]}" ]] && bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
     [[ -n "${terminfo[kcud1]}" ]] && bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
 }
-
-# Setup history search on first use
 _setup_history_search
+
+echo "🚀 ZSH Full Mode Active"
 
 
 
