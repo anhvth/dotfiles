@@ -4,6 +4,9 @@
 # Use: zsh_toggle_mode to switch between modes
 #============================================================================
 
+# Start timing for performance measurement
+ZSH_START_TIME=$(($(date +%s%N)/1000000))
+
 # Determine current mode
 ZSH_MODE="${ZSH_MODE:-balanced}"  # Default to balanced mode
 ZSH_MODE_FILE="$HOME/.zsh_mode"
@@ -82,7 +85,10 @@ if [[ "$ZSH_MODE" == "fastest" ]]; then
     # Basic completion
     autoload -Uz compinit && compinit -C
     
-    echo "⚡ ZSH Fastest Mode Active"
+    # Show startup time
+    ZSH_END_TIME=$(($(date +%s%N)/1000000))
+    ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
+    echo "⚡ ZSH Fastest Mode Active (${ZSH_LOAD_TIME}ms)"
     return
 fi
 
@@ -169,7 +175,10 @@ if [[ "$ZSH_MODE" == "balanced" ]]; then
     [[ -f $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
         source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     
-    echo "⚖️  ZSH Balanced Mode Active"
+    # Show startup time
+    ZSH_END_TIME=$(($(date +%s%N)/1000000))
+    ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
+    echo "⚖️  ZSH Balanced Mode Active (${ZSH_LOAD_TIME}ms)"
     return
 fi
 
@@ -270,7 +279,10 @@ _setup_history_search() {
 }
 _setup_history_search
 
-echo "🚀 ZSH Full Mode Active"
+# Show startup time
+ZSH_END_TIME=$(($(date +%s%N)/1000000))
+ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
+echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
 
 
 
