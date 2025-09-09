@@ -98,7 +98,7 @@ if test "$FISH_MODE" = "fastest"
     fish_add_path $HOME/.local/bin
     
     # Homebrew (macOS only)
-    if string match -q "darwin*" "$OSTYPE"
+    if test (uname -s) = "Darwin"
         if test -d /opt/homebrew/bin
             fish_add_path /opt/homebrew/bin
             fish_add_path /opt/homebrew/sbin
@@ -202,7 +202,7 @@ fish_add_path $HOME/.local/bin
 fish_add_path $HOME/.fzf/bin
 
 # Homebrew paths (macOS only)
-if string match -q "darwin*" "$OSTYPE"
+if test (uname -s) = "Darwin"
     if test -d /opt/homebrew/bin
         fish_add_path /opt/homebrew/bin
         fish_add_path /opt/homebrew/sbin
