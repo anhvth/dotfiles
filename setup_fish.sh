@@ -306,3 +306,5 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+
+tmux source-file ~/.tmux.conf
