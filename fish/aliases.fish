@@ -71,4 +71,4 @@ else
     alias code="code"
 end
 
-alias python="uv run python"
+alias atv=source .venv/bin/activate.fish
