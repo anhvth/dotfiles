@@ -70,3 +70,5 @@ if command -v code-insiders >/dev/null 2>&1
 else
     alias code="code"
 end
+
+alias python="uv run python"
