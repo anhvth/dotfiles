@@ -363,44 +363,27 @@ set_env() {
 	echo "Set ${varname}=${value} in ~/.env"
 }
 
-unset_env() {
-	local varname=$1
-
-	if [ -z "$varname" ]; then
-		echo "Usage: unset_env <varname>"
-		return 1
-	fi
-
-	# Remove the entry for the variable
-	if grep -q "^${varname}=" ~/.env; then
-		sed -i.bak "/^${varname}=/d" ~/.env
-		echo "Unset ${varname} from ~/.env"
-	else
-		echo "${varname} not found in ~/.env"
-	fi
-}
-
-# Virtualenv auto-activation toggles
-ve_auto_chdir() {
-    local mode="$1"
-    if [[ -z "$mode" ]]; then
-        local eff=$(print -r -- ${VENV_AUTO_CHDIR:-on})
-        echo "VENV_AUTO_CHDIR=${eff} (default on). Usage: ve_auto_chdir on|off"
-        return 0
+setup_vscode() {
+    if command -v code &> /dev/null; then
+        export EDITOR=code
+    elif command -v code-insiders &> /dev/null; then
+        export EDITOR=code-insiders
+        # Create alias so 'code' command works with code-insiders
+        alias code='code-insiders'
+        export EDITOR=code-insiders
+    else
+        export EDITOR=vi  # Fallback to nano if neither is available
     fi
-    case "${mode:l}" in
-        on|1|true|yes)
-            set_env VENV_AUTO_CHDIR on
-            echo "Enabled cd-based auto-activation (VENV_AUTO_CHDIR=on)."
-            ;;
-        off|0|false|no)
-            set_env VENV_AUTO_CHDIR off
-            echo "Disabled cd-based auto-activation (VENV_AUTO_CHDIR=off)."
-            ;;
-        *)
-            echo "Usage: ve_auto_chdir on|off"; return 1;;
-    esac
 }
+
+# Set up VS Code with fallback
+
+
+set-env() {
+	${EDITOR:-vi} ~/.env
+}
+
+
 
 ve_auto_login() {
     local mode="$1"
