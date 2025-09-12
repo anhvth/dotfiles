@@ -567,3 +567,17 @@ tree_project() {
 
     echo "Project code structure saved to $output_file"
 }
+
+
+# Function to activate uv environment if available
+atv() {
+    local python_exec=$(uv run python -c "import sys; print(sys.executable)" 2>/dev/null)
+    if [[ "$python_exec" == *".venv"* ]]; then
+        local activate_path="${python_exec%python*}activate"
+        if [[ -f "$activate_path" ]]; then
+            echo "Activate 🐍 -> $activate_path"
+            source "$activate_path"
+        fi
+    fi
+}
+atv

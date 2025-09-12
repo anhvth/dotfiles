@@ -62,3 +62,4 @@ if command -v code-insiders >/dev/null 2>&1; then
 else
   alias code="code"
 fi
+alias which-python="uv run python -c 'import sys; print(sys.executable)'"

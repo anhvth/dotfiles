@@ -5,53 +5,7 @@
 # Start timing for performance measurement
 ZSH_START_TIME=$(($(date +%s%N)/1000000))
 
-#============================================================================
-# Auto-activate uv environment
-#============================================================================
 
-# Function to activate uv environment if available
-auto_activate_uv() {
-    # Check if we have a pyproject.toml or uv.lock in current directory
-    if [[ -f "pyproject.toml" || -f "uv.lock" ]]; then
-        local python_exec=$(uv run python -c "import sys; print(sys.executable)" 2>/dev/null)
-        if [[ "$python_exec" == *".venv"* ]]; then
-            local activate_path="${python_exec%python*}activate"
-            if [[ -f "$activate_path" ]]; then
-                source "$activate_path"
-            fi
-        fi
-    fi
-}
-
-# Hook into directory changes
-# chpwd() {
-#     auto_activate_uv
-# }
-
-# Activate on shell startup if in a uv project
-
-#============================================================================
-# Python command fallback
-#============================================================================
-
-# python() {
-#     if command python "$@" 2>/dev/null; then
-#         :
-#     else
-#         uv run python "$@"
-#     fi
-# }
-# pip() {
-#     if command pip "$@" 2>/dev/null; then
-#         :
-#     else
-#         uv run pip "$@"
-#     fi
-# }
-
-#============================================================================
-# Full Mode Configuration - All features with performance optimizations
-#============================================================================
 # Performance optimizations
 DISABLE_AUTO_UPDATE="true"
 DISABLE_MAGIC_FUNCTIONS="true"
@@ -149,4 +103,3 @@ _setup_history_search
 # Show startup time
 ZSH_END_TIME=$(($(date +%s%N)/1000000))
 ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
-echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
