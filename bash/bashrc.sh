@@ -106,7 +106,7 @@ export PATH="$HOME/.local/bin:$PATH"  # Add ~/.local/bin to PATH
 [ -f ~/.alias.h ] && source ~/.alias.h
 
 # Print a welcome message
-echo -e "${COLOR_CYAN}Welcome to your modern Bash shell!${COLOR_RESET}"
+# echo -e "${COLOR_CYAN}Welcome to your modern Bash shell!${COLOR_RESET}"
 
 
 
