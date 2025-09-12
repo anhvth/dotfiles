@@ -50,6 +50,24 @@ zsh_set_mode() {
 }
 
 #============================================================================
+# Python command fallback
+#============================================================================
+
+python() {
+    if command python "$@" 2>/dev/null; then
+        :
+    else
+        uv run python "$@"
+    fi
+}
+pip() {
+    if command pip "$@" 2>/dev/null; then
+        :
+    else
+        uv run pip "$@"
+    fi
+}
+#============================================================================
 # FASTEST MODE - Minimal setup for maximum speed
 #============================================================================
 if [[ "$ZSH_MODE" == "fastest" ]]; then
