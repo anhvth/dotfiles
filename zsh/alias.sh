@@ -34,7 +34,7 @@ alias kill_processes='awk "{print \$2}" | xargs kill'
 
 # Rsync aliases
 alias rs='rsync -av --progress'
-alias rs-git='rs --filter=\':- .gitignore\'
+
 
 # Custom tools aliases
 alias autoreload='$HOME/dotfiles/custom-tools/autoreload-toggle'
