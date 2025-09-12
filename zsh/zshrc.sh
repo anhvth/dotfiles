@@ -15,6 +15,32 @@ ZSH_MODE_FILE="$HOME/.zsh_mode"
 [[ -f "$ZSH_MODE_FILE" ]] && ZSH_MODE="$(cat "$ZSH_MODE_FILE")"
 
 #============================================================================
+# Auto-activate uv environment
+#============================================================================
+
+# Function to activate uv environment if available
+auto_activate_uv() {
+    # Check if we have a pyproject.toml or uv.lock in current directory
+    if [[ -f "pyproject.toml" || -f "uv.lock" ]]; then
+        local python_exec=$(uv run python -c "import sys; print(sys.executable)" 2>/dev/null)
+        if [[ "$python_exec" == *".venv"* ]]; then
+            local activate_path="${python_exec%python*}activate"
+            if [[ -f "$activate_path" ]]; then
+                source "$activate_path"
+            fi
+        fi
+    fi
+}
+
+# Hook into directory changes
+# chpwd() {
+#     auto_activate_uv
+# }
+
+# Activate on shell startup if in a uv project
+
+
+#============================================================================
 # Mode Toggle Function
 #============================================================================
 zsh_toggle_mode() {
@@ -301,6 +327,5 @@ _setup_history_search
 ZSH_END_TIME=$(($(date +%s%N)/1000000))
 ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
 echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
-
 
 
