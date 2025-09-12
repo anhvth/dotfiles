@@ -1,0 +1,21 @@
+[project]
+name = "pytools"
+version = "0.1.0"
+description = "A collection of Python utility scripts for dotfiles management"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["loguru"]
+
+[project.scripts]
+lsh = "pytools.lsh:main"
+hf-down = "pytools.hf_down:main"
+kill-process-grep = "pytools.kill_process_grep:main"
+print-ipv4 = "pytools.print_ipv4:main"
+organize-downloads = "pytools.organize_downloads:main"
+cat-projects = "pytools.cat_projects:main"
+pyinit = "pytools.cli_utils:pyinit"
+keep-ssh = "pytools.cli_utils:keep_ssh"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -54,13 +54,9 @@ alias run-autossh="autossh -M 20000 -o ServerAliveInterval=5 -f -N"
 # Dotfiles alias
 alias update-dotfiles="set cwd (pwd) && cd ~/dotfiles && git pull && cd $cwd"
 
-# Python tools aliases
-alias lsh="pytools-lsh.py"
-alias ipython_config="pytools-ipython_config.py"
-alias cat_projects="python ~/dotfiles/custom-tools/pytools-cat_projects.py"
-alias hf-down="pytools-hf-down.py"
-alias kill_process_grep="pytools-kill_process_grep.py"
-alias print-ipv4="pytools-print-ipv4.py"
+# Python tools - now available as system binaries after installing pytools package
+# Run: cd ~/dotfiles/custom-tools/pytools && uv pip install -e . --system
+# Available commands: lsh, hf-down, kill-process-grep, print-ipv4, cat-projects, organize-downloads, pyinit, keep-ssh
 alias deit="docker exec -it"
 alias upy="uv run python"
 
@@ -71,4 +67,4 @@ else
     alias code="code"
 end
 
-alias atv=source .venv/bin/activate.fish
+alias atv="source .venv/bin/activate.fish"
