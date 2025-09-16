@@ -347,20 +347,44 @@ keep_ssh() {
 set_env() {
 	local varname=$1
 	local value=$2
+	local env_file="$HOME/.env"
 
 	if [ -z "$varname" ] || [ -z "$value" ]; then
 		echo "Usage: set_env <varname> <value>"
 		return 1
 	fi
 
+	touch "$env_file"
+
 	# Remove existing entry for the variable
-	if grep -q "^${varname}=" ~/.env; then
-		sed -i.bak "/^${varname}=/d" ~/.env
+	if grep -q "^${varname}=" "$env_file" 2>/dev/null; then
+		sed -i.bak "/^${varname}=/d" "$env_file"
+		[[ -f "${env_file}.bak" ]] && rm -f "${env_file}.bak"
 	fi
 
 	# Add the new value
-	echo "${varname}=${value}" >> ~/.env
+	echo "${varname}=${value}" >> "$env_file"
 	echo "Set ${varname}=${value} in ~/.env"
+}
+
+unset_env() {
+	local varname=$1
+	local env_file="$HOME/.env"
+
+	if [ -z "$varname" ]; then
+		echo "Usage: unset_env <varname>"
+		return 1
+	fi
+
+	if [[ -f "$env_file" ]]; then
+		if grep -q "^${varname}=" "$env_file"; then
+			sed -i.bak "/^${varname}=/d" "$env_file"
+			[[ -f "${env_file}.bak" ]] && rm -f "${env_file}.bak"
+			echo "Unset ${varname} from ~/.env"
+		fi
+	fi
+
+	unset "$varname"
 }
 
 setup_vscode() {
@@ -404,6 +428,120 @@ ve_auto_login() {
         *)
             echo "Usage: ve_auto_login on|off"; return 1;;
     esac
+}
+
+atv() {
+	local target="$1"
+	local activate_path=""
+	local history_file="$HOME/.cache/dotfiles/atv_history"
+	local history_limit=30
+
+	if [[ -z "$target" ]]; then
+		if [[ -n "$VIRTUAL_ENV" ]]; then
+			target="${VIRTUAL_ENV}"
+		else
+			target=".venv"
+		fi
+	fi
+
+	if [[ -d "$target" ]]; then
+		if [[ -f "$target/bin/activate" ]]; then
+			activate_path="$target/bin/activate"
+		elif [[ -f "$target/activate" ]]; then
+			activate_path="$target/activate"
+		fi
+	elif [[ -f "$target" ]]; then
+		activate_path="$target"
+	fi
+
+	if [[ -z "$activate_path" || "${activate_path##*/}" != "activate" ]]; then
+		echo "atv: could not find an activate script for '$target'"
+		return 1
+	fi
+
+	activate_path="${activate_path:A}"
+	if [[ ! -f "$activate_path" ]]; then
+		echo "atv: activate script not found at $activate_path"
+		return 1
+	fi
+
+	source "$activate_path" || return $?
+	local env_root="${activate_path:h}"
+	echo "Activated virtualenv at ${env_root}"
+	set_env VENV_AUTO_ACTIVATE on
+	set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
+	export VENV_AUTO_ACTIVATE="on"
+	export VENV_AUTO_ACTIVATE_PATH="$activate_path"
+
+	mkdir -p "${history_file:h}"
+	local -a entries
+	entries=()
+	entries+=("$activate_path")
+	if [[ -f "$history_file" ]]; then
+		while IFS= read -r line; do
+			[[ -z "$line" || "$line" == "$activate_path" ]] && continue
+			entries+=("$line")
+		done < "$history_file"
+	fi
+	if (( ${#entries} > history_limit )); then
+		entries=("${(@)entries[1,$history_limit]}")
+	fi
+	: >| "$history_file"
+	for line in "${entries[@]}"; do
+		printf '%s\n' "$line"
+	done >> "$history_file"
+}
+
+auto_atv_disable() {
+	set_env VENV_AUTO_ACTIVATE off
+	unset_env VENV_AUTO_ACTIVATE_PATH
+	export VENV_AUTO_ACTIVATE="off"
+	unset VENV_AUTO_ACTIVATE_PATH
+	echo "Automatic virtualenv activation disabled. Run atv to enable again."
+}
+
+atv_select() {
+	local history_file="$HOME/.cache/dotfiles/atv_history"
+	if [[ ! -f "$history_file" ]]; then
+		echo "atv_select: no history yet. Run atv to record environments."
+		return 1
+	fi
+
+	local selection=""
+	if command -v fzf >/dev/null 2>&1; then
+		selection=$(fzf --prompt="venv> " --height=40% --reverse < "$history_file")
+	else
+		selection=$(head -n 1 "$history_file")
+		if [[ -n "$selection" ]]; then
+			echo "fzf not found; using most recent: $selection"
+		fi
+	fi
+
+	if [[ -z "$selection" ]]; then
+		return 1
+	fi
+
+	atv "$selection"
+}
+
+auto_atv_startup() {
+	local flag="${VENV_AUTO_ACTIVATE:-off}"
+	if [[ "${flag:l}" != "on" ]]; then
+		return
+	fi
+
+	local activate_path="${VENV_AUTO_ACTIVATE_PATH:-}"
+	if [[ -z "$activate_path" || ! -f "$activate_path" ]]; then
+		return
+	fi
+
+	local env_root="${activate_path:h}"
+	if [[ -n "$VIRTUAL_ENV" && "$VIRTUAL_ENV" == "$env_root" ]]; then
+		return
+	fi
+
+	echo "Auto-activating virtualenv from $env_root"
+	source "$activate_path"
 }
 
 # Alias management

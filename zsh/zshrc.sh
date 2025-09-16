@@ -123,6 +123,9 @@ source $ZSH/oh-my-zsh.sh
 [[ -f $HOME/dotfiles/zsh/plugins/fixls.zsh ]] && source $HOME/dotfiles/zsh/plugins/fixls.zsh
 [[ -f ~/dotfiles/zsh/alias.sh ]] && source ~/dotfiles/zsh/alias.sh
 [[ -f ~/dotfiles/zsh/functions.sh ]] && source ~/dotfiles/zsh/functions.sh
+if typeset -f auto_atv_startup >/dev/null; then
+    auto_atv_startup
+fi
 
 # Autosuggestions with performance settings
 if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
