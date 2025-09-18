@@ -5,30 +5,7 @@
 # Start timing for performance measurement
 ZSH_START_TIME=$(($(date +%s%N)/1000000))
 
-#============================================================================
-# Auto-activate uv environment
-#============================================================================
 
-# Function to activate uv environment if available
-auto_activate_uv() {
-    # Check if we have a pyproject.toml or uv.lock in current directory
-    if [[ -f "pyproject.toml" || -f "uv.lock" ]]; then
-        local python_exec=$(uv run python -c "import sys; print(sys.executable)" 2>/dev/null)
-        if [[ "$python_exec" == *".venv"* ]]; then
-            local activate_path="${python_exec%python*}activate"
-            if [[ -f "$activate_path" ]]; then
-                source "$activate_path"
-            fi
-        fi
-    fi
-}
-
-# Hook into directory changes
-# chpwd() {
-#     auto_activate_uv
-# }
-
-# Activate on shell startup if in a uv project
 
 #============================================================================
 # Python command fallback
@@ -123,8 +100,11 @@ source $ZSH/oh-my-zsh.sh
 [[ -f $HOME/dotfiles/zsh/plugins/fixls.zsh ]] && source $HOME/dotfiles/zsh/plugins/fixls.zsh
 [[ -f ~/dotfiles/zsh/alias.sh ]] && source ~/dotfiles/zsh/alias.sh
 [[ -f ~/dotfiles/zsh/functions.sh ]] && source ~/dotfiles/zsh/functions.sh
-if typeset -f auto_atv_startup >/dev/null; then
-    auto_atv_startup
+[[ -f ~/dotfiles/zsh/venv.sh ]] && source ~/dotfiles/zsh/venv.sh
+
+# Auto-activate virtual environment if configured
+if typeset -f _venv_auto_startup >/dev/null; then
+    _venv_auto_startup
 fi
 
 # Autosuggestions with performance settings

@@ -58,13 +58,4 @@ alias update-dotfiles='cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd'
 
 alias deit="docker exec -it"
 
-function uv_venv() {
-    local venv_path="${1:-.venv}"
-    shift
-    local extra_packages=("$@")
-    uv venv && source "$venv_path/bin/activate" && uv pip install pip poetry jupyter ipython "${extra_packages[@]}"
-    source "$venv_path/bin/activate"
-    echo "pip is:" $(which pip)
-    echo "python is:" $(which python)
-    echo "ipython is:" $(which ipython)
-}
+# UV virtual environment creation moved to zsh/venv.sh (venv-create function)
