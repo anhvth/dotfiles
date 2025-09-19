@@ -59,3 +59,4 @@ alias update-dotfiles='cwd=$(pwd) && cd ~/dotfiles && git pull && cd $cwd'
 alias deit="docker exec -it"
 
 # UV virtual environment creation moved to zsh/venv.sh (venv-create function)
+alias install-pytools='cd ~/dotfiles/custom-tools/pytools && uv pip install -e . && cd -'
