@@ -15,6 +15,8 @@ organize-downloads = "pytools.organize_downloads:main"
 cat-projects = "pytools.cat_projects:main"
 pyinit = "pytools.cli_utils:pyinit"
 keep-ssh = "pytools.cli_utils:keep_ssh"
+setup-vscode = "pytools.cli_utils:setup_vscode"
+atv-select = "pytools.cli_utils:atv_select"
 
 [build-system]
 requires = ["hatchling"]

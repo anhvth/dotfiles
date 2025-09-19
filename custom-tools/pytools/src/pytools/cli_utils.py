@@ -4,6 +4,7 @@ CLI utilities module for various system and development tasks.
 """
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -133,3 +134,110 @@ def keep_ssh():
     except KeyboardInterrupt:
         print("\nSSH keep-alive stopped")
         return 0
+
+
+def setup_vscode():
+    """Setup VSCode settings by merging default Python settings into .vscode/settings.json."""
+    parser = argparse.ArgumentParser(description="Setup VSCode settings for Python development")
+    parser.add_argument("--target-dir", default=".", help="Target directory containing .vscode (default: current directory)")
+    
+    args = parser.parse_args()
+    
+    try:
+        # Get the path to the default settings file
+        script_dir = Path(__file__).parent
+        default_settings_file = script_dir / "vscode_settings" / "default_python.json"
+        
+        if not default_settings_file.exists():
+            print(f"Error: Default settings file not found at {default_settings_file}")
+            return 1
+        
+        # Read default settings
+        with open(default_settings_file, 'r') as f:
+            default_settings = json.load(f)
+        
+        # Setup target .vscode directory and settings file
+        target_dir = Path(args.target_dir).resolve()
+        vscode_dir = target_dir / ".vscode"
+        settings_file = vscode_dir / "settings.json"
+        
+        # Create .vscode directory if it doesn't exist
+        vscode_dir.mkdir(exist_ok=True)
+        
+        # Read existing settings or create empty dict
+        existing_settings = {}
+        if settings_file.exists():
+            try:
+                with open(settings_file, 'r') as f:
+                    existing_settings = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Warning: {settings_file} contains invalid JSON, starting fresh")
+                existing_settings = {}
+        
+        # Merge settings (default settings will override existing ones for Python-specific keys)
+        merged_settings = existing_settings.copy()
+        merged_settings.update(default_settings)
+        
+        # Write merged settings back
+        with open(settings_file, 'w') as f:
+            json.dump(merged_settings, f, indent=4)
+        
+        print(f"✅ VSCode settings updated successfully!")
+        print(f"📁 Settings file: {settings_file}")
+        print(f"🔧 Applied {len(default_settings)} Python-specific settings")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"Error setting up VSCode: {e}")
+        return 1
+
+
+def atv_select():
+    """Select and activate a virtual environment from history using fzf."""
+    parser = argparse.ArgumentParser(description="Select and activate virtual environment using fzf")
+    parser.add_argument("--help-venv", action="store_true", help="Show virtual environment management help")
+    
+    args = parser.parse_args()
+    
+    if args.help_venv:
+        print("""
+Virtual Environment Selection with fzf
+
+This tool provides an interactive way to select and activate Python virtual environments
+from your usage history using fzf (fuzzy finder).
+
+Features:
+- Lists most recently used virtual environments
+- Interactive selection with fzf fuzzy search
+- Fallback to most recent if fzf is not available
+- Automatic activation of selected environment
+
+Dependencies:
+- fzf (optional but recommended for interactive selection)
+- Virtual environment history file at ~/.cache/dotfiles/venv_history
+
+Note: This is a Python implementation that calls the shell function 'venv-select'.
+For full virtual environment management, use the shell commands directly:
+- va, venv-activate: Activate environment
+- vd, venv-deactivate: Deactivate environment  
+- vc, venv-create: Create new environment
+- vs, venv-select: Select from history (same as this command)
+- vl, venv-list: List all environments
+- vh, venv-help: Show detailed help
+        """)
+        return 0
+    
+    try:
+        # Call the shell function venv-select which handles fzf interaction
+        result = subprocess.run(
+            ["zsh", "-c", "source ~/.zshrc && venv-select"],
+            capture_output=False,  # Let it interact with terminal
+            text=True
+        )
+        return result.returncode
+        
+    except Exception as e:
+        print(f"Error running venv-select: {e}")
+        print("Make sure zsh and the venv functions are properly configured.")
+        return 1

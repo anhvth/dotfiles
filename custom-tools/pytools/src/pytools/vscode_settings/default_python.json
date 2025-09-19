@@ -1,0 +1,33 @@
+{
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.exclude": [
+        "cache_unsloth_dataset",
+        ".cache",
+        ".venv",
+        "env",
+        "__pycache__",
+        "unsloth_compiled_cache",
+        ".cache",
+        "legacy",
+        "data",
+        "logs",
+        "outputs",
+        "notebooks",
+        "scripts",
+        "tests",
+        "examples",
+        "configs",
+        "models",
+        "figures",
+        "docs",
+        "third_party",
+        "build",
+        "dist",
+        ".eggs",
+        "*.egg-info",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ipynb_checkpoints"
+    ],
+    "python.terminal.activateEnvironment": false
+}
