@@ -1,20 +1,6 @@
 # Modern Bash Configuration (~/.bashrc or ~/dotfiles/bash/bashrc.sh)
 
 # Function to set up code/code-insiders with fallback
-setup_vscode() {
-    if command -v code &> /dev/null; then
-        export EDITOR=code
-    elif command -v code-insiders &> /dev/null; then
-        export EDITOR=code-insiders
-        # Create alias so 'code' command works with code-insiders
-        alias code='code-insiders'
-    else
-        export EDITOR=nano  # Fallback to nano if neither is available
-    fi
-}
-
-# Set up VS Code with fallback
-setup_vscode
 
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return

@@ -1,5 +1,6 @@
+# type: ignore
 # Configuration file for ipython.
-c = get_config()
+c = get_config()  # noqa: F821
 
 # Set up auto reload for modules
 c.InteractiveShellApp.extensions = ['autoreload']
