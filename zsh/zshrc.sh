@@ -5,30 +5,6 @@
 # Start timing for performance measurement
 ZSH_START_TIME=$(($(date +%s%N)/1000000))
 
-
-
-#============================================================================
-# Python command fallback
-#============================================================================
-
-# python() {
-#     if command python "$@" 2>/dev/null; then
-#         :
-#     else
-#         uv run python "$@"
-#     fi
-# }
-# pip() {
-#     if command pip "$@" 2>/dev/null; then
-#         :
-#     else
-#         uv run pip "$@"
-#     fi
-# }
-
-#============================================================================
-# Full Mode Configuration - All features with performance optimizations
-#============================================================================
 # Performance optimizations
 DISABLE_AUTO_UPDATE="true"
 DISABLE_MAGIC_FUNCTIONS="true"
@@ -132,14 +108,11 @@ _setup_history_search
 # Show startup time
 ZSH_END_TIME=$(($(date +%s%N)/1000000))
 ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
-echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
+# echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
 
 if command -v code >/dev/null 2>&1; then
 #   code="code"
   echo "Using VS Code as the editor"
 elif command -v code-insiders >/dev/null 2>&1; then
   alias code="code-insiders"
-  echo "Using VS Code Insiders as the editor"
-else
-  echo "Neither VS Code nor VS Code Insiders is available in PATH"
 fi

@@ -275,6 +275,15 @@ update_dotfiles() {
     # Update the dotfiles repository
     cd ~/dotfiles && git pull
     echo "Successfully updated dotfiles repository."
+    
+    # Install/update custom pytools
+    if command -v uv >/dev/null 2>&1; then
+        echo "Installing pytools with uv..."
+        uv pip install custom-tools/pytools --system
+    else
+        echo "Warning: uv not found, skipping pytools installation"
+    fi
+    
     source ~/.zshrc
 }
 

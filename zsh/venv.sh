@@ -493,7 +493,7 @@ _venv_auto_startup() {
         return
     fi
 
-    echo "🚀 Auto-activating virtualenv from $(basename "$env_root")"
+    echo "🐍 source \033[32m'$activate_path'\033[0m"
     source "$activate_path"
 }
 
