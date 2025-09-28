@@ -1,61 +1,22 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Exit immediately if a command exits with a non-zero status.
-set -e
+set -euo pipefail
 
-# --- Configuration ---
-# Assume dotfiles are already cloned/mounted at this location
-DOTFILES_DIR="${HOME}/dotfiles"
-# Optional: Change if your ipython config is elsewhere within dotfiles
-IPYTHON_CONFIG_SRC="${DOTFILES_DIR}/tools/ipython_config.py"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/scripts/bootstrap/common.sh"
 
-# --- Icons ---
-ICON_SUCCESS="✅"
-ICON_INFO="ℹ️"
-ICON_WARN="⚠️"
-ICON_ERROR="❌"
-ICON_SETUP="⚙️"
-ICON_PACKAGE="📦"
-ICON_DOWNLOAD="📥"
-ICON_CONFIG="🔧"
-ICON_GIT="🌱"
-ICON_SHELL="🐚"
-ICON_OS="🐧"
-ICON_UPDATE="🔄"
-ICON_CHECK="🔎"
-ICON_PLUGIN="🔌"
-ICON_PYTHON="🐍"
+: "${DOTFILES_DIR:=${HOME}/dotfiles}"
+: "${IPYTHON_CONFIG_SRC:=${DOTFILES_DIR}/tools/ipython_config.py}"
 
-# --- Helper Functions ---
-
-# Function to print messages with icons
-log_info() { echo -e "${ICON_INFO} $1"; }
-log_success() { echo -e "${ICON_SUCCESS} $1"; }
-log_warning() { echo -e "${ICON_WARN} $1"; }
-log_error() { echo -e "${ICON_ERROR} $1"; exit 1; } # Exit on error
-
-# Determine if sudo is needed and available
-SUDO_CMD=""
-if [ "$(id -u)" -ne 0 ]; then
-    if command -v sudo >/dev/null 2>&1; then
-        SUDO_CMD="sudo"
-        log_info "Running as non-root. Using 'sudo' for privileged commands."
-    else
-        log_error "Running as non-root, but 'sudo' command not found. Cannot proceed."
-    fi
-else
-    log_info "Running as root. 'sudo' not required."
-fi
+bootstrap::ensure_dotfiles_dir
+bootstrap::detect_sudo
 
 # Install a package using apt-get
 install_package() {
     local package_name="$1"
     log_info "${ICON_PACKAGE} Attempting to install $package_name..."
-    if $SUDO_CMD apt-get install -y "$package_name"; then
-        log_success "${ICON_PACKAGE} Successfully installed $package_name."
-    else
-        log_error "${ICON_PACKAGE} Failed to install $package_name."
-    fi
+    bootstrap::apt_install "$package_name"
+    log_success "${ICON_PACKAGE} Successfully installed $package_name."
 }
 
 # Check if a command exists, if not, install the corresponding package
@@ -85,16 +46,11 @@ log_success "${ICON_OS} Detected Ubuntu/Debian based system."
 # 0. Initial Update and Essential Tools
 log_info "${ICON_UPDATE} 0. Updating package list and installing essential tools..."
 log_info "${ICON_UPDATE} Updating package list (apt-get update)..."
-if ! $SUDO_CMD apt-get update; then
-    log_error "${ICON_UPDATE} Failed to update package lists."
-fi
+bootstrap::apt_update
 log_success "${ICON_UPDATE} Package lists updated."
 
 log_info "${ICON_PACKAGE} Installing essential tools (curl, git, software-properties-common, build-essential)..."
-# Install multiple packages at once
-if ! $SUDO_CMD apt-get install -y curl git software-properties-common build-essential; then
-    log_error "${ICON_PACKAGE} Failed to install essential tools."
-fi
+bootstrap::apt_install curl git software-properties-common build-essential
 log_success "${ICON_PACKAGE} Essential tools installed."
 
 # Check if dotfiles directory exists
@@ -113,17 +69,9 @@ check_and_install zsh
 # Neovim: Use PPA for potentially newer versions as recommended for Ubuntu
 log_info "${ICON_PACKAGE} Setting up Neovim installation..."
 log_info "${ICON_DOWNLOAD} Adding Neovim stable PPA (ppa:neovim-ppa/stable)..."
-if $SUDO_CMD add-apt-repository -y ppa:neovim-ppa/stable; then
-    log_success "${ICON_DOWNLOAD} Neovim PPA added successfully."
-    log_info "${ICON_UPDATE} Updating package list after adding PPA..."
-    if ! $SUDO_CMD apt-get update; then
-      log_warning "${ICON_UPDATE} Failed to update package list after adding Neovim PPA, installation might use older version from cache."
-    else
-      log_success "${ICON_UPDATE} Package list updated."
-    fi
-else
-    log_warning "${ICON_DOWNLOAD} Failed to add Neovim PPA. Will attempt installing 'neovim' from default repositories, which might be outdated."
-fi
+bootstrap::add_apt_repository ppa:neovim-ppa/stable
+log_info "${ICON_UPDATE} Updating package list after adding PPA..."
+bootstrap::apt_update
 # Check Neovim command 'nvim' and install package 'neovim'
 check_and_install nvim neovim
 # Install Python support for Neovim (required for many plugins)
@@ -278,11 +226,11 @@ if command -v zsh >/dev/null 2>&1; then
 
     if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
         log_info "${ICON_CONFIG} Attempting to change default shell to Zsh ($ZSH_PATH)..."
-        if [ "$SUDO_CMD" = "sudo" ]; then
+        if [[ "${BOOTSTRAP_SUDO:-}" = "sudo" ]]; then
             log_warning "Changing shell for non-root user ('$CURRENT_USER') requires 'sudo chsh'."
             log_warning "This might require interactive password entry unless passwordless sudo is configured for 'chsh'."
             log_warning "Attempting non-interactively, but may fail. Consider changing manually or via container setup."
-            if $SUDO_CMD chsh -s "$ZSH_PATH" "$CURRENT_USER"; then
+            if bootstrap::sudo chsh -s "$ZSH_PATH" "$CURRENT_USER"; then
                log_success "${ICON_SHELL} Successfully changed default shell to Zsh for user '$CURRENT_USER'."
             else
                log_warning "${ICON_SHELL} Failed to change default shell using 'sudo chsh'. Please change it manually if needed (e.g., 'sudo chsh -s $(which zsh) $USER')."
@@ -295,7 +243,7 @@ if command -v zsh >/dev/null 2>&1; then
                  log_warning "${ICON_SHELL} Failed to change default shell for 'root' using 'chsh'."
             fi
         else
-             # Should not happen due to initial SUDO_CMD check, but as a fallback:
+           # Should not happen due to initial sudo check, but as a fallback:
              log_warning "${ICON_SHELL} Cannot automatically change shell as non-root without sudo privileges."
         fi
     else
@@ -312,7 +260,7 @@ log_info "To apply changes:"
 log_info "  - Start a new shell session, or"
 log_info "  - Run 'source ~/.zshrc' if you are already in zsh, or"
 log_info "  - Run 'zsh' to start a new zsh shell."
-if [ -n "$SUDO_CMD" ] && command -v zsh > /dev/null 2>&1 && [ "$(getent passwd "$(whoami)" | cut -d: -f7)" != "$(command -v zsh)" ]; then
+if [[ -n "${BOOTSTRAP_SUDO:-}" ]] && command -v zsh > /dev/null 2>&1 && [ "$(getent passwd "$(whoami)" | cut -d: -f7)" != "$(command -v zsh)" ]; then
     log_warning "Remember: The default shell for your user might *not* have been changed automatically due to needing 'sudo'. You may need to change it manually."
 fi
 log_info "-----------------------------------------------------"

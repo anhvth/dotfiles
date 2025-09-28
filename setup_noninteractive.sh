@@ -1,55 +1,49 @@
-#!/bin/bash
-# /home/anhvth5/dotfiles/setup_noninteractive.sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/scripts/bootstrap/common.sh"
 
-# Update the package list and add the Neovim repository
-sudo apt-get update -y
-sudo add-apt-repository -y ppa:neovim-ppa/stable
-sudo apt-get update -y
+bootstrap::ensure_dotfiles_dir
+bootstrap::detect_sudo
 
-# Install required packages in a single line
-echo "Installing required packages: zsh, neovim, tmux, ripgrep, fzf, silversearcher-ag, curl, git"
-sudo apt-get install -y zsh neovim tmux ripgrep fzf silversearcher-ag curl git
+log_info "${ICON_SETUP} Starting unattended setup..."
+bootstrap::apt_update
+bootstrap::add_apt_repository ppa:neovim-ppa/stable
+bootstrap::apt_update
 
-# Set up dotfiles
-echo "Setting up dotfiles..."
-echo "source '$HOME/dotfiles/zsh/zshrc_manager.sh'" > ~/.zshrc
+log_info "${ICON_PACKAGE} Installing required packages..."
+bootstrap::apt_install zsh neovim tmux ripgrep fzf silversearcher-ag curl git
 
-mkdir -p ~/.config/nvim/
-echo "so $HOME/dotfiles/vim/nvimrc.vim" > ~/.config/nvim/init.vim
+log_info "${ICON_CONFIG} Wiring shell/editor configs..."
+bootstrap::link_config "source '$DOTFILES_DIR/zsh/zshrc_manager.sh'" "${HOME}/.zshrc"
+bootstrap::link_config "so $DOTFILES_DIR/vim/nvimrc.vim" "${HOME}/.config/nvim/init.vim"
+bootstrap::link_config "source-file $DOTFILES_DIR/tmux/tmux.conf" "${HOME}/.tmux.conf"
 
-echo "source-file $HOME/dotfiles/tmux/tmux.conf" > ~/.tmux.conf
-
-# Install vim-plug for Neovim
-echo "Installing vim-plug for Neovim..."
-curl -fsLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \
+log_info "${ICON_PLUGIN} Installing vim-plug for Neovim..."
+bootstrap::ensure_dir "${HOME}/.local/share/nvim/site/autoload"
+curl -fsLo "${HOME}/.local/share/nvim/site/autoload/plug.vim" --create-dirs \
     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+log_success "${ICON_PLUGIN} vim-plug installed."
 
-# Install fzf non-interactively
-if [ ! -d "$HOME/.fzf" ]; then
-    echo "Installing fzf..."
-    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    yes | ~/.fzf/install --all --no-bash --no-fish
+if [[ ! -d "${HOME}/.fzf" ]]; then
+    log_info "${ICON_DOWNLOAD} Installing fzf..."
+    git clone --depth 1 https://github.com/junegunn/fzf.git "${HOME}/.fzf"
+    yes | "${HOME}/.fzf/install" --all --no-bash --no-fish
+    log_success "${ICON_DOWNLOAD} fzf installed."
+else
+    log_info "${ICON_CHECK} fzf already present. Skipping clone."
 fi
 
-# Install Neovim plugins non-interactively
-echo "Installing Neovim plugins..."
+log_info "${ICON_CONFIG} Copying IPython configuration..."
+bootstrap::copy_file "${DOTFILES_DIR}/tools/ipython_config.py" "${HOME}/.ipython/profile_default/ipython_config.py"
 
-
-# Change the default shell to zsh without prompting for password
-echo "Changing the default shell to zsh for the current user..."
-
-# Copy IPython configuration
-echo "Copying IPython configuration..."
-mkdir -p ~/.ipython/profile_default
-cp custom-tools/ipython_config.py ~/.ipython/profile_default/ipython_config.py
-# Configure git
-read -p "Enter your Git email: " git_email
+log_info "${ICON_GIT} Configuring Git identity..."
+read -r -p "Enter your Git email: " git_email
 git config --global user.email "$git_email"
-read -p "Enter your Git username: " git_username
+read -r -p "Enter your Git username: " git_username
 git config --global user.name "$git_username"
-git config --global core.editor "vim"
+git config --global core.editor "nvim"
 
-echo "Setup complete!"
-echo "Run: nvim +PlugInstall +qall"
+log_success "${ICON_SUCCESS} Setup complete!"
+log_info "${ICON_INFO} Run 'nvim +PlugInstall +qall' after first launch to sync plugins."
