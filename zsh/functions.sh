@@ -426,8 +426,6 @@ set-env() {
 
 
 
-
-
 # Alias management
 set_alias() {
 	local aliasname=$1
@@ -573,65 +571,3 @@ tree_project() {
     echo "Project code structure saved to $output_file"
 }
 
-
-# rs-code: continuous rsync of git-tracked + code files (includes .git/)
-rs-code() {
-  if [ $# -ne 1 ]; then
-    echo "Usage: rs-code user@host:/remote/path"
-    return 1
-  fi
-
-  local remote="$1"
-  local repo_root
-  repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
-    echo "❌ Not inside a git repository."; return 1; }
-
-  # Detect watcher
-  local watcher=""
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    command -v fswatch >/dev/null 2>&1 || { echo "❌ Need fswatch (brew install fswatch)"; return 1; }
-    watcher=(fswatch -1 -r "$repo_root" "$repo_root/.git/index" "$repo_root/.git/HEAD")
-  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    command -v inotifywait >/dev/null 2>&1 || { echo "❌ Need inotify-tools (sudo apt install inotify-tools)"; return 1; }
-    watcher=(inotifywait -q -r -e modify,create,delete,move "$repo_root" "$repo_root/.git/index" "$repo_root/.git/HEAD")
-  else
-    echo "❌ Unsupported OS: $OSTYPE"; return 1
-  fi
-
-  # Allowed extra (untracked) code extensions; override via RS_CODE_EXTS if you want
-  local exts="${RS_CODE_EXTS:-py|js|ts|jsx|tsx|html|css|json|md|yml|yaml|sh}"
-  echo "🚀 rs-code: syncing from $repo_root  →  $remote"
-  echo "   (tracked files + untracked .*\\.($exts)\$ , includes .git/)"
-
-  while true; do
-    # Build file list: tracked + untracked code + .git
-    local file_list
-    file_list=$(mktemp) || { echo "❌ mktemp failed"; return 1; }
-
-    # tracked
-    git -C "$repo_root" ls-files >> "$file_list"
-
-    # untracked but interesting code files (respect .gitignore via --exclude-standard)
-    git -C "$repo_root" ls-files --others --exclude-standard \
-      | grep -E "\.($exts)$" >> "$file_list" || true
-
-    # include .git directory
-    echo ".git" >> "$file_list"
-
-    # de-dup + sort in place
-    sort -u "$file_list" -o "$file_list"
-
-    echo "▶️  rsync starting…"
-    # Run rsync; ignore transient "No such file or directory" noise and don't break loop on partial (23)
-    rsync -av --progress --delete \
-      --files-from="$file_list" \
-      "$repo_root"/ \
-      "$remote" 2> >(grep -v "No such file or directory" >&2) || true
-
-    rm -f "$file_list"
-    echo "⏳ waiting for changes (file edits, git add/checkout)…"
-    "${watcher[@]}" >/dev/null 2>&1
-    # tiny debounce to coalesce bursts
-    sleep 0.2
-  done
-}

@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "Usage: rs-code user@host:/remote/path [--watch] [--sync-venv-remote]"
+  exit 1
+fi
+
+remote="$1"
+shift || true
+sync_venv_remote=false
+mode=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --watch)
+      mode="--watch"
+      shift
+      ;;
+    --sync-venv-remote)
+      sync_venv_remote=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: rs-code user@host:/remote/path [--watch] [--sync-venv-remote]"
+      exit 1
+      ;;
+  esac
+done
+
+# Prepare args for recursive calls
+args="$remote"
+if [[ "$sync_venv_remote" == "true" ]]; then
+  args="$args --sync-venv-remote"
+fi
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [[ -z "$repo_root" ]]; then
+  echo "❌ Not inside a git repository."
+  exit 1
+fi
+
+cfg_file="$repo_root/sync.cfg"
+log_file="$repo_root/.rs-code.log"
+
+# Defaults for limits
+: "${PUSH_MAX_SIZE:=52428800}"     # 50 MB
+: "${VENVPULL_MAX_SIZE:=5242880}"  # 5 MB
+
+log() {
+  echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] [$1] $2" | tee -a "$log_file"
+}
+
+# Generate default sync.cfg if missing
+init_cfg() {
+  if [[ ! -f "$cfg_file" ]]; then
+    cat > "$cfg_file" <<EOF
+# rs-code sync configuration
+# Lines beginning with '#' are comments
+# Include/exclude rules follow rsync-style filter syntax
+
+# Always include git-tracked and untracked files
++ $(git -C "$repo_root" ls-files | sed 's|^|+ |')
++ $(git -C "$repo_root" ls-files --others --exclude-standard | sed 's|^|+ |')
+
+# Exclude common heavy dirs
+- .venv/
+- node_modules/
+
+# Exclude large files (>50MB by default)
+# (handled dynamically, see below)
+
+# Always include .git
++ .git/
+EOF
+    log INFO "Generated default $cfg_file"
+  fi
+}
+
+# Build rsync filter file from sync.cfg
+build_filter() {
+  local filter_file="$repo_root/.rs-code-filter"
+  > "$filter_file"
+
+  # Copy rules from sync.cfg, ignoring comments
+  grep -v '^\s*#' "$cfg_file" | sed '/^\s*$/d' >> "$filter_file"
+
+  # Dynamically exclude large files
+  while IFS= read -r file; do
+    local full_path="$repo_root/$file"
+    if [[ -f "$full_path" ]]; then
+      local size
+      size=$(stat -f%z "$full_path" 2>/dev/null || stat -c%s "$full_path" 2>/dev/null || echo 0)
+      if [[ $size -gt $PUSH_MAX_SIZE ]]; then
+        echo "- $file" >> "$filter_file"
+        log WARN "Skipping large file ($(numfmt --to=iec $size)): $file"
+      fi
+    fi
+  done < <(git -C "$repo_root" ls-files)
+
+  echo "$filter_file"
+}
+
+sync_once() {
+  log INFO "🚀 rs-code: syncing $repo_root ↔ $remote"
+
+  init_cfg
+  local filter_file
+  filter_file=$(build_filter)
+
+  # Push
+  rsync -av --progress --delete \
+    --filter="merge $filter_file" \
+    "$repo_root"/ \
+    "$remote" 2> >(grep -v "No such file or directory" >&2) || true
+
+  # Pull venv configs (small files only) if enabled
+  if [[ "$sync_venv_remote" == "true" ]]; then
+    rsync -av --progress \
+      --filter="+ .venv/***" \
+      --filter="- *" \
+      --max-size=$VENVPULL_MAX_SIZE \
+      "$remote"/ \
+      "$repo_root"/ || true
+  fi
+
+  log INFO "✅ Sync complete"
+}
+
+watch_mode() {
+  if ! command -v entr >/dev/null 2>&1; then
+    log ERROR "Watch mode requires 'entr'. Install it via 'brew install entr'."
+    exit 1
+  fi
+
+  log INFO "👀 Watch mode enabled. Monitoring files + $cfg_file"
+
+  (
+    cd "$repo_root" || exit 1
+    { git ls-files; git ls-files --others --exclude-standard; echo "sync.cfg"; } \
+      | while read -r f; do [[ -e "$f" ]] && echo "$f"; done
+  ) | entr -r rs-code $args
+}
+
+# Run
+if [[ "$mode" == "--watch" ]]; then
+  watch_mode
+else
+  sync_once
+fi
