@@ -227,6 +227,17 @@ venv-activate() {
     export VENV_AUTO_ACTIVATE="on"
     export VENV_AUTO_ACTIVATE_PATH="$activate_path"
 
+    # Update VS Code settings if .vscode/settings.json exists
+    if [[ -f ".vscode/settings.json" ]]; then
+        local python_path=$(which python)
+        if command -v jq >/dev/null 2>&1; then
+            jq --arg path "$python_path" '.["python.defaultInterpreterPath"] = $path' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
+            echo "✅ Updated VS Code python.defaultInterpreterPath to $python_path"
+        else
+            echo "⚠️  jq not found; skipping VS Code settings update"
+        fi
+    fi
+
     # Update history
     _venv_update_history "$activate_path"
 }

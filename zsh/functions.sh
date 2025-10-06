@@ -289,41 +289,41 @@ update_dotfiles() {
 
 # ZSH Autosuggestions toggle functions
 
-autosuggestions_toggle() {
-    local target="$HOME/.zshrc"
-    local line="source \$HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
-    # if the line is not in target create one
-    if ! grep -q "$line" "$target"; then
-        echo "Line not found in $target, adding it now."
-        echo "$line" >>"$target"
-        return
-    fi
-    if grep -q "^[^#]*$line" "$target"; then
-        # Line is uncommented, comment it
-        sed -i "s|^\($line\)|#\1|" "$target"
-    else
-        # Line is commented, uncomment it
-        sed -i "s|^#\($line\)|\1|" "$target"
-    fi
-}
+# autosuggestions_toggle() {
+#     local target="$HOME/.zshrc"
+#     local line="source \$HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+#     # if the line is not in target create one
+#     if ! grep -q "$line" "$target"; then
+#         echo "Line not found in $target, adding it now."
+#         echo "$line" >>"$target"
+#         return
+#     fi
+#     if grep -q "^[^#]*$line" "$target"; then
+#         # Line is uncommented, comment it
+#         sed -i "s|^\($line\)|#\1|" "$target"
+#     else
+#         # Line is commented, uncomment it
+#         sed -i "s|^#\($line\)|\1|" "$target"
+#     fi
+# }
 
-init_copilot_instruction() {
-    local initfile="$HOME/dotfiles/.github/copilot-instructions.md"
-    local targetdir=".github"
-    local targetfile="$targetdir/copilot-instructions.md"
-    echo "Copying $initfile to $targetfile"
+# init_copilot_instruction() {
+#     local initfile="$HOME/dotfiles/.github/copilot-instructions.md"
+#     local targetdir=".github"
+#     local targetfile="$targetdir/copilot-instructions.md"
+#     echo "Copying $initfile to $targetfile"
 
-    # Check if the source file exists
-    if [ ! -f "$initfile" ]; then
-        echo "Source file $initfile does not exist."
-        return 1
-    fi
+#     # Check if the source file exists
+#     if [ ! -f "$initfile" ]; then
+#         echo "Source file $initfile does not exist."
+#         return 1
+#     fi
 
-    # Ensure the target directory exists
-    mkdir -p "$targetdir"
+#     # Ensure the target directory exists
+#     mkdir -p "$targetdir"
 
-    cp "$initfile" "$targetfile"
-}
+#     cp "$initfile" "$targetfile"
+# }
 
 test_proxy() {
     output=$(curl -x 127.0.0.1:$1 https://www.google.com -I)

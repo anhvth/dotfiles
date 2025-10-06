@@ -84,11 +84,11 @@ if typeset -f _venv_auto_startup >/dev/null; then
 fi
 
 # Autosuggestions with performance settings
-if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-    source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-    ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
-    ZSH_AUTOSUGGEST_USE_ASYNC=1
-fi
+# if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+#     source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+#     ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
+#     ZSH_AUTOSUGGEST_USE_ASYNC=1
+# fi
 
 # Syntax highlighting (always last for performance)
 [[ -f $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
