@@ -486,6 +486,10 @@ zsh_enable_suggestions() {
     if [[ ! -f ~/.zsh_suggestions_enabled ]]; then
         touch ~/.zsh_suggestions_enabled
         source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+        ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
+        ZSH_AUTOSUGGEST_USE_ASYNC=1
+        ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+        ZSH_AUTOSUGGEST_STRATEGY=(history completion)
         echo "✅ Autosuggestions enabled!"
     else
         echo "ℹ️  Autosuggestions already enabled"
@@ -496,6 +500,40 @@ zsh_disable_suggestions() {
     echo "🚫 Disabling autosuggestions..."
     rm -f ~/.zsh_suggestions_enabled
     echo "✅ Autosuggestions disabled! Restart zsh to take effect."
+}
+
+# Toggle autosuggestions on/off in current session
+autosuggestions_toggle() {
+    local flag_file="$HOME/.auto_suggestion_disable"
+    if [[ -f "$flag_file" ]]; then
+        # File exists, remove it and enable autosuggestions
+        rm -f "$flag_file"
+        if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+            source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+            ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
+            ZSH_AUTOSUGGEST_USE_ASYNC=1
+            ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+            ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+            bindkey '^ ' autosuggest-accept
+            echo "✅ Autosuggestions enabled"
+        else
+            echo "❌ Plugin not found"
+        fi
+    else
+        # File doesn't exist, create it and disable autosuggestions
+        touch "$flag_file"
+        unset ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE
+        unset ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE
+        unset ZSH_AUTOSUGGEST_USE_ASYNC
+        unset ZSH_AUTOSUGGEST_STRATEGY
+        # Unbind the accept widget
+        bindkey -r '^ ' 2>/dev/null
+        # Clear any pending suggestions
+        if typeset -f _zsh_autosuggest_clear >/dev/null; then
+            _zsh_autosuggest_clear
+        fi
+        echo "❌ Autosuggestions disabled"
+    fi
 }
 
 

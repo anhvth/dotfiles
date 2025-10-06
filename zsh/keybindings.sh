@@ -121,6 +121,7 @@ HELPER_MESSAGES=(
   "ctrl+l:Clear screen"
   "ctrl+n:List files"
   "ctrl+r:Search history using fzf"
+  "ctrl+shift+a:Toggle autosuggestions on/off"
   "ctrl+h:Show this help message"
   ""
   "set_env <varname> <value>:Set an environment variable in ~/.env"
@@ -153,10 +154,10 @@ bindkey "^h" show_keybindings_help
 # Autosuggestions Toggle
 # ------------------------------
 
-# Toggle autosuggestions on
-function autosuggestions_toggle() {
-  BUFFER="autosuggestions_toggle"
-  zle accept-line
+# Toggle autosuggestions - Ctrl+Shift+A
+function toggle_autosuggestions_widget() {
+  autosuggestions_toggle
+  zle reset-prompt
 }
-zle -N autosuggestions_toggle
-bindkey "^a" autosuggestions_toggle
+zle -N toggle_autosuggestions_widget
+bindkey "^a" toggle_autosuggestions_widget
