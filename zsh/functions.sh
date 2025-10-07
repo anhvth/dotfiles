@@ -365,6 +365,10 @@ set_env() {
 
 	touch "$env_file"
 
+    if grep -qx -- "${varname}=${value}" "$env_file" 2>/dev/null; then
+        return 0
+    fi
+
 	# Remove existing entry for the variable
 	if grep -q "^${varname}=" "$env_file" 2>/dev/null; then
 		sed -i.bak "/^${varname}=/d" "$env_file"
@@ -373,7 +377,7 @@ set_env() {
 
 	# Add the new value
 	echo "${varname}=${value}" >> "$env_file"
-	echo "Set ${varname}=${value} in ~/.env"
+    echo "Persisted ${varname} in ~/.env"
 }
 
 unset_env() {
