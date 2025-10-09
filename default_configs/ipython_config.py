@@ -4,7 +4,7 @@ c = get_config()  # noqa: F821
 
 # Set up auto reload for modules
 c.InteractiveShellApp.extensions = ['autoreload']
-c.InteractiveShellApp.exec_lines = ['%autoreload 2']
+c.InteractiveShellApp.exec_lines = ['%autoreload 2', 'print("\\033[33mAutoreload is enabled.\\033[0m")']
 
 # Display settings
 c.TerminalInteractiveShell.confirm_exit = False
