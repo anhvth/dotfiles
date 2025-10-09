@@ -8,9 +8,10 @@ tmux windows, with automatic CPU core and GPU assignment per worker.
 
 import argparse
 import os
+from typing import Literal
 
 
-def main():
+def main() -> Literal[1] | Literal[0]:
     """
     Executes a list of commands in parallel using tmux.
 
