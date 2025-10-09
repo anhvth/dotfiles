@@ -56,26 +56,28 @@ Examples:
   vc myenv                     # Create myenv with basic packages  
   vc .venv numpy pandas        # Create .venv with extra packages
 
-Basic packages installed: pip, poetry, jupyter, ipython
+Basic packages installed: pip, uv, jupyter
 EOF
             ;;
-        "venv-select"|"vs")
+                "venv-create"|"vc")
             cat << 'EOF'
-Usage: venv-select [--help]
-       vs [--help]
+Usage: venv-create [UV_OPTIONS...] [PATH] [PACKAGES...] [--help]
+             vc [UV_OPTIONS...] [PATH] [PACKAGES...] [--help]
 
 Select and activate a virtual environment from history using fzf.
 Fallback to most recent if fzf is not available.
 EOF
-            ;;
-        "venv-auto"|"venv-auto-toggle")
+    UV_OPTIONS    Flags passed directly to 'uv venv' (e.g. --python 3.13)
+    PATH          Path for new virtualenv (default: .venv)
+    PACKAGES      Additional packages to install into the environment
             cat << 'EOF'
 Usage: venv-auto [on|off|status|--help]
+    vc                                 # Create .venv with basic packages
+    vc myenv                           # Create myenv with basic packages  
+    vc --python 3.13                   # Create .venv targeting Python 3.13
+    vc .venv numpy pandas              # Create .venv with extra packages
 
-Control automatic virtual environment activation.
-
-Commands:
-  on       Enable auto-activation on shell startup
+Basic packages installed: pip, uv, jupyter
   off      Disable auto-activation  
   status   Show current auto-activation status (default)
 
@@ -262,36 +264,207 @@ venv-create() {
         return 0
     fi
 
-    local venv_path="${1:-.venv}"
-    shift
-    local extra_packages=("$@")
-    
     if ! command -v uv >/dev/null 2>&1; then
         echo "❌ UV not found. Please install UV first."
         return 1
     fi
 
+    local -a uv_args=()
+    local venv_path=""
+
+    while (( $# > 0 )); do
+        case "$1" in
+            --help)
+                _venv_show_help "venv-create"
+                return 0
+                ;;
+            --)
+                shift
+                break
+                ;;
+            -*)
+                uv_args+=("$1")
+                shift
+                ;;
+            *)
+                venv_path="$1"
+                shift
+                break
+                ;;
+        esac
+    done
+
+    if [[ -z "$venv_path" ]]; then
+        venv_path=".venv"
+    fi
+
+    local -a extra_packages=("$@")
+
     echo "🔨 Creating virtual environment at: $venv_path"
-    uv venv "$venv_path" || return 1
-    
+    if (( ${#uv_args[@]} )); then
+        uv venv "${uv_args[@]}" "$venv_path" || return 1
+    else
+        uv venv "$venv_path" || return 1
+    fi
+
+    local venv_root="${venv_path:A}"
+    local activate_script="$venv_root/bin/activate"
+
+    if [[ ! -f "$activate_script" ]]; then
+        echo "❌ Activate script not found at $activate_script"
+        return 1
+    fi
+
     echo "📦 Installing basic packages..."
-    local activate_script="$venv_path/bin/activate"
-    source "$activate_script"
-    
+    if ! source "$activate_script"; then
+        echo "❌ Failed to source activate script: $activate_script"
+        return 1
+    fi
+
+    hash -r 2>/dev/null || true
+
     # Install basic packages
-    uv pip install pip poetry jupyter ipython "${extra_packages[@]}" || return 1
-    
+    if (( ${#extra_packages[@]} )); then
+        uv pip install pip uv jupyter "${extra_packages[@]}" || return 1
+    else
+        uv pip install pip uv jupyter || return 1
+    fi
+
     echo "✅ Virtual environment created and activated!"
-    echo "📍 pip: $(which pip)"
-    echo "🐍 python: $(which python)" 
-    echo "📓 ipython: $(which ipython)"
-    
+
+    # Assert tools are from venv
+    local -a tools=(pip jupyter)
+    source "$activate_script"
+    local venv_bin="$venv_root/bin"
+    for cmd in "${tools[@]}"; do
+        local cmd_path=$(command -v "$cmd" 2>/dev/null)
+        local expected="$venv_bin/$cmd"
+        if [[ -z "$cmd_path" ]]; then
+            echo "❌ $cmd not found after installation"
+            return 1
+        fi
+        cmd_path="${cmd_path:A}"
+        expected="${expected:A}"
+        if [[ "$cmd_path" != "$expected" ]]; then
+            echo "❌ $cmd not from venv: $cmd_path"
+            echo "   Expected: $expected"
+            return 1
+        fi
+        echo "✅ $cmd: $cmd_path"
+    done
+
     # Enable auto-activation and update history
     set_env VENV_AUTO_ACTIVATE on
     set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
-    export VENV_AUTO_ACTIVATE="on"
-    export VENV_AUTO_ACTIVATE_PATH="$activate_script"
+    export VENV_AUTO_ACTIVATE="on"    # ...existing code...
     
+    # Create new virtual environment
+    venv-create() {
+        if [[ "$1" == "--help" ]]; then
+            _venv_show_help "venv-create"
+            return 0
+        fi
+    
+        if ! command -v uv >/dev/null 2>&1; then
+            echo "❌ UV not found. Please install UV first."
+            return 1
+        fi
+    
+        local -a uv_args=()
+        local venv_path=""
+    
+        while (( $# > 0 )); do
+            case "$1" in
+                --help)
+                    _venv_show_help "venv-create"
+                    return 0
+                    ;;
+                --)
+                    shift
+                    break
+                    ;;
+                -*)
+                    uv_args+=("$1")
+                    shift
+                    ;;
+                *)
+                    venv_path="$1"
+                    shift
+                    break
+                    ;;
+            esac
+        done
+    
+        if [[ -z "$venv_path" ]]; then
+            venv_path=".venv"
+        fi
+    
+        local -a extra_packages=("$@")
+    
+        echo "🔨 Creating virtual environment at: $venv_path"
+        if (( ${#uv_args[@]} )); then
+            uv venv "${uv_args[@]}" "$venv_path" || return 1
+        else
+            uv venv "$venv_path" || return 1
+        fi
+    
+        local venv_root="${venv_path:A}"
+        local activate_script="$venv_root/bin/activate"
+    
+        if [[ ! -f "$activate_script" ]]; then
+            echo "❌ Activate script not found at $activate_script"
+            return 1
+        fi
+    
+        echo "📦 Installing basic packages..."
+        if ! source "$activate_script"; then
+            echo "❌ Failed to source activate script: $activate_script"
+            return 1
+        fi
+    
+        hash -r 2>/dev/null || true
+    
+        # Install basic packages
+        if (( ${#extra_packages[@]} )); then
+            uv pip install pip uv jupyter "${extra_packages[@]}" || return 1
+        else
+            uv pip install pip uv jupyter || return 1
+        fi
+    
+        echo "✅ Virtual environment created and activated!"
+    
+        # Assert tools are from venv
+        local -a tools=(pip jupyter)
+        local venv_bin="$venv_root/bin"
+        for cmd in "${tools[@]}"; do
+            local cmd_path=$(command -v "$cmd" 2>/dev/null)
+            local expected="$venv_bin/$cmd"
+            if [[ -z "$cmd_path" ]]; then
+                echo "❌ $cmd not found after installation"
+                return 1
+            fi
+            cmd_path="${cmd_path:A}"
+            expected="${expected:A}"
+            if [[ "$cmd_path" != "$expected" ]]; then
+                echo "❌ $cmd not from venv: $cmd_path"
+                echo "   Expected: $expected"
+                return 1
+            fi
+            echo "✅ $cmd: $cmd_path"
+        done
+    
+        # Enable auto-activation and update history
+        set_env VENV_AUTO_ACTIVATE on
+        set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
+        export VENV_AUTO_ACTIVATE="on"
+        export VENV_AUTO_ACTIVATE_PATH="$activate_script"
+    
+        _venv_update_history "$activate_script"
+    }
+    
+    # ...existing code...
+    export VENV_AUTO_ACTIVATE_PATH="$activate_script"
+
     _venv_update_history "$activate_script"
 }
 
