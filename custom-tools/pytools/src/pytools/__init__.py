@@ -5,4 +5,4 @@ This package consolidates various Python utilities that were previously
 scattered across the dotfiles repository.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

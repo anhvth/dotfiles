@@ -1,23 +1,24 @@
 [project]
 name = "pytools"
-version = "0.1.0"
+version = "0.2.0"
 description = "A collection of Python utility scripts for dotfiles management"
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = ["loguru"]
+dependencies = ["loguru", "rich>=13.7.0", "prompt_toolkit>=3.0.36"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-cov>=4.0.0"]
 
 [project.scripts]
-lsh = "pytools.lsh:main"
-hf-down = "pytools.hf_down:main"
-kill-process-grep = "pytools.kill_process_grep:main"
-print-ipv4 = "pytools.print_ipv4:main"
-organize-downloads = "pytools.organize_downloads:main"
-cat-projects = "pytools.cat_projects:main"
-pyinit = "pytools.cli_utils:pyinit"
-keep-ssh = "pytools.cli_utils:keep_ssh"
-setup-vscode = "pytools.cli_utils:setup_vscode"
-atv-select = "pytools.cli_utils:atv_select"
+pytools = "pytools.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
