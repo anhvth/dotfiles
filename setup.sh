@@ -256,6 +256,48 @@ install_core_packages() {
     log_success "${ICON_PACKAGE} Core packages installed."
 }
 
+# Install uv (Python package manager) for macOS and Ubuntu
+install_uv() {
+    log_info "${ICON_DOWNLOAD} Installing uv (Python toolchain manager)..."
+
+    if command_exists uv; then
+        log_success "${ICON_CHECK} uv already installed."
+        return 0
+    fi
+
+    local os=$(detect_os)
+    if [[ "$os" == "macos" ]]; then
+        if has_brew; then
+            log_info "${ICON_PACKAGE} Installing uv via Homebrew..."
+            brew_install uv
+        else
+            log_warning "${ICON_WARN} Homebrew not found. Falling back to official install script."
+            curl -fsSL https://astral.sh/uv/install.sh | sh
+        fi
+    else
+        # Ubuntu/Linux: prefer official installer (fast, no system Python changes)
+        if command_exists curl; then
+            curl -fsSL https://astral.sh/uv/install.sh | sh
+        else
+            apt_update
+            apt_install curl
+            curl -fsSL https://astral.sh/uv/install.sh | sh
+        fi
+    fi
+
+    # Ensure ~/.local/bin is in PATH for current session
+    if [[ -d "${HOME}/.local/bin" ]] && [[ ":$PATH:" != *":${HOME}/.local/bin:"* ]]; then
+        export PATH="${HOME}/.local/bin:${PATH}"
+        log_info "${ICON_INFO} Added ~/.local/bin to PATH for this session."
+    fi
+
+    if command_exists uv; then
+        log_success "${ICON_SUCCESS} uv installed successfully."
+    else
+        log_warning "${ICON_WARN} uv installation did not complete. You can install manually: curl -fsSL https://astral.sh/uv/install.sh | sh"
+    fi
+}
+
 install_fzf() {
     log_info "${ICON_DOWNLOAD} Installing fzf..."
     
@@ -283,8 +325,45 @@ install_oh_my_zsh() {
         return 0
     fi
     
-    git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-zsh"
+    # Use official oh-my-zsh installation script
+    # Set RUNZSH=no to prevent automatic shell switch at the end
+    # Set KEEP_ZSHRC=yes to preserve existing .zshrc (we manage it ourselves)
+    if [[ "$AUTO_YES" == true ]]; then
+        RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    else
+        RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    fi
+    
     log_success "${ICON_GIT} oh-my-zsh installed."
+}
+
+install_zsh_plugins() {
+    log_info "${ICON_PLUGIN} Installing zsh plugins..."
+    
+    local custom_plugins_dir="${HOME}/.oh-my-zsh/custom/plugins"
+    mkdir -p "$custom_plugins_dir"
+    
+    # Install zsh-autosuggestions
+    if [[ -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
+        log_info "${ICON_CHECK} zsh-autosuggestions already exists. Updating..."
+        (cd "$custom_plugins_dir/zsh-autosuggestions" && git pull -q)
+    else
+        log_info "${ICON_DOWNLOAD} Cloning zsh-autosuggestions..."
+        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins_dir/zsh-autosuggestions"
+        log_success "${ICON_PLUGIN} zsh-autosuggestions installed."
+    fi
+    
+    # Install zsh-syntax-highlighting
+    if [[ -d "$custom_plugins_dir/zsh-syntax-highlighting" ]]; then
+        log_info "${ICON_CHECK} zsh-syntax-highlighting already exists. Updating..."
+        (cd "$custom_plugins_dir/zsh-syntax-highlighting" && git pull -q)
+    else
+        log_info "${ICON_DOWNLOAD} Cloning zsh-syntax-highlighting..."
+        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting "$custom_plugins_dir/zsh-syntax-highlighting"
+        log_success "${ICON_PLUGIN} zsh-syntax-highlighting installed."
+    fi
+    
+    log_success "${ICON_PLUGIN} Zsh plugins installed."
 }
 
 install_vim_plug() {
@@ -510,9 +589,14 @@ main() {
     
     # Step 1: Install core packages
     install_core_packages
-    
+
     echo "─────────────────────────────────────────────────────────────"
-    
+
+    # Step 1.1: Install uv
+    install_uv
+
+    echo "─────────────────────────────────────────────────────────────"
+
     # Step 2: Install fzf
     install_fzf
     
@@ -523,22 +607,27 @@ main() {
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 4: Setup dotfiles
+    # Step 4: Install zsh plugins
+    install_zsh_plugins
+    
+    echo "─────────────────────────────────────────────────────────────"
+    
+    # Step 5: Setup dotfiles
     setup_dotfiles
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 5: Install vim-plug
+    # Step 6: Install vim-plug
     install_vim_plug
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 6: Install vim plugins
+    # Step 7: Install vim plugins
     install_vim_plugins
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 7: Install GitHub Copilot
+    # Step 8: Install GitHub Copilot
     if confirm "Install GitHub Copilot for Neovim?" "y"; then
         install_github_copilot
     else
@@ -547,7 +636,7 @@ main() {
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 8: Install pytools
+    # Step 9: Install pytools
     if confirm "Install pytools?" "y"; then
         install_pytools
     else
@@ -556,12 +645,12 @@ main() {
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 9: Configure Git
+    # Step 10: Configure Git
     configure_git
     
     echo "─────────────────────────────────────────────────────────────"
     
-    # Step 10: Change default shell
+    # Step 11: Change default shell
     change_default_shell
     
     echo ""

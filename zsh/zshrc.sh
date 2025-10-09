@@ -84,8 +84,8 @@ if typeset -f _venv_auto_startup >/dev/null; then
 fi
 
 # Autosuggestions with performance settings (check disable flag)
-if [[ ! -f ~/.auto_suggestion_disable && -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-    source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+if [[ ! -f ~/.auto_suggestion_disable && -f $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    source $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
     ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
     ZSH_AUTOSUGGEST_USE_ASYNC=1
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
@@ -95,8 +95,8 @@ if [[ ! -f ~/.auto_suggestion_disable && -f $HOME/dotfiles/zsh/plugins/zsh-autos
 fi
 
 # Syntax highlighting (always last for performance)
-[[ -f $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
-    source $HOME/dotfiles/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+[[ -f $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+    source $HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # Optimized history search
 _setup_history_search() {

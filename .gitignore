@@ -19,3 +19,9 @@ tools/bin/nvim
 
 # oh-my-zsh should be installed to ~/.oh-my-zsh, not stored in repo
 zsh/plugins/oh-my-zsh/
+
+# Zsh plugins are installed to ~/.oh-my-zsh/custom/plugins/ via setup.sh
+zsh/plugins/zsh-autosuggestions/
+zsh/plugins/zsh-syntax-highlighting/
+
+node_modules
