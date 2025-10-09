@@ -161,3 +161,11 @@ function toggle_autosuggestions_widget() {
 }
 zle -N toggle_autosuggestions_widget
 bindkey "^a" toggle_autosuggestions_widget
+
+# Pytools and enter
+function pytools_and_enter() {
+  BUFFER="pytools"
+  zle accept-line
+}
+zle -N pytools_and_enter
+bindkey "^p" pytools_and_enter

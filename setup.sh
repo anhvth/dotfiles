@@ -90,6 +90,21 @@ log_error() {
     echo -e "${RED}$1${NC}" >&2
 }
 
+check_node_version() {
+    local required_major=22
+    local current_major=$(node -v 2>/dev/null | sed 's/v//' | cut -d. -f1)
+
+    if [[ -z "$current_major" ]]; then
+        log_error "❌ Node.js is not installed. Please install Node.js ${required_major}+."
+        exit 1
+    elif (( current_major < required_major )); then
+        log_error "❌ Node.js version $current_major is too old. Please upgrade to v${required_major}+."
+        exit 1
+    else
+        log_success "✅ Node.js version $(node -v) detected."
+    fi
+}
+
 #============================================================================
 # OS Detection and Package Manager Functions
 #============================================================================
@@ -276,6 +291,8 @@ install_npm_globals() {
             apt_install nodejs npm
         fi
     fi
+
+    check_node_version
 
     # Install openai/codex globally
     if npm list -g openai/codex >/dev/null 2>&1; then
