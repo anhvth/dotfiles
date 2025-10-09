@@ -321,20 +321,37 @@ install_oh_my_zsh() {
     log_info "${ICON_DOWNLOAD} Installing oh-my-zsh..."
     
     if [[ -d "${HOME}/.oh-my-zsh" ]]; then
-        log_info "${ICON_CHECK} oh-my-zsh already exists. Skipping."
-        return 0
-    fi
-    
-    # Use official oh-my-zsh installation script
-    # Set RUNZSH=no to prevent automatic shell switch at the end
-    # Set KEEP_ZSHRC=yes to preserve existing .zshrc (we manage it ourselves)
-    if [[ "$AUTO_YES" == true ]]; then
-        RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+        log_info "${ICON_CHECK} oh-my-zsh already exists. Skipping installation."
     else
-        RUNZSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+        # Use official oh-my-zsh installation script
+        # Set RUNZSH=no to prevent automatic shell switch at the end
+        # We let it create its .zshrc, then replace it with our clean version
+        if [[ "$AUTO_YES" == true ]]; then
+            RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+        else
+            RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+        fi
+        
+        log_success "${ICON_GIT} oh-my-zsh installed."
     fi
     
-    log_success "${ICON_GIT} oh-my-zsh installed."
+    # Backup existing .zshrc if it exists
+    if [[ -f "${HOME}/.zshrc" ]]; then
+        local backup_file="${HOME}/.zshrc.backup"
+        cp "${HOME}/.zshrc" "$backup_file"
+        log_info "${ICON_CONFIG} Backed up existing .zshrc to .zshrc.backup"
+    fi
+    
+    # Always create a clean, minimal ~/.zshrc
+    # Replace the noisy oh-my-zsh generated file (100+ lines) with our minimal version
+    log_info "${ICON_CONFIG} Creating clean ~/.zshrc..."
+    cat > "${HOME}/.zshrc" << 'EOF'
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+source ~/dotfiles/zsh/zshrc_manager.sh
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+EOF
+    log_success "${ICON_CONFIG} Created minimal ~/.zshrc (replaced verbose oh-my-zsh version)"
 }
 
 install_zsh_plugins() {
