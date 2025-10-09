@@ -283,6 +283,13 @@ install_npm_globals() {
     else
         if npm install -g openai/codex; then
             log_success "${ICON_PACKAGE} Installed: openai/codex (global)"
+        elif [[ -n "${BOOTSTRAP_SUDO:-}" ]]; then
+            log_warning "${ICON_WARN} npm install requires elevated permissions. Retrying with sudo..."
+            if ${BOOTSTRAP_SUDO} npm install -g openai/codex; then
+                log_success "${ICON_PACKAGE} Installed: openai/codex (global) with sudo"
+            else
+                log_warning "${ICON_WARN} Failed to install openai/codex globally even with sudo."
+            fi
         else
             log_warning "${ICON_WARN} Failed to install openai/codex globally."
         fi
@@ -356,13 +363,19 @@ install_oh_my_zsh() {
     if [[ -d "${HOME}/.oh-my-zsh" ]]; then
         log_info "${ICON_CHECK} oh-my-zsh already exists. Skipping installation."
     else
+        # Remove existing .zshrc to avoid prompts during installation
+        if [[ -f "${HOME}/.zshrc" ]]; then
+            rm -f "${HOME}/.zshrc"
+            log_info "${ICON_CONFIG} Removed existing .zshrc to avoid installation prompts"
+        fi
+        
         # Use official oh-my-zsh installation script
         # Set RUNZSH=no to prevent automatic shell switch at the end
         # We let it create its .zshrc, then replace it with our clean version
         if [[ "$AUTO_YES" == true ]]; then
-            RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+            RUNZSH=no CHSH=no yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
         else
-            RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+            RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
         fi
         
         log_success "${ICON_GIT} oh-my-zsh installed."
