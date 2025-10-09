@@ -460,6 +460,7 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
                 border_style="cyan",
             )
         )
+        render_tools(reg)
         while True:
             try:
                 text = session.prompt("pytools> ", completer=completer)
