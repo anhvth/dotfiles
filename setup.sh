@@ -256,6 +256,39 @@ install_core_packages() {
     log_success "${ICON_PACKAGE} Core packages installed."
 }
 
+# Install npm packages needed globally
+install_npm_globals() {
+    log_info "${ICON_PACKAGE} Installing global npm packages..."
+    
+    # Ensure Node.js/npm is available
+    if ! command_exists npm; then
+        log_warning "${ICON_WARN} npm not found. Installing Node.js..."
+        local os=$(detect_os)
+        if [[ "$os" == "macos" ]]; then
+            if has_brew; then
+                brew_install node
+            else
+                log_error "${ICON_ERROR} Homebrew not available. Please install Node.js manually."
+                return 1
+            fi
+        else
+            apt_update
+            apt_install nodejs npm
+        fi
+    fi
+
+    # Install openai/codex globally
+    if npm list -g openai/codex >/dev/null 2>&1; then
+        log_info "${ICON_CHECK} npm package openai/codex already installed globally."
+    else
+        if npm install -g openai/codex; then
+            log_success "${ICON_PACKAGE} Installed: openai/codex (global)"
+        else
+            log_warning "${ICON_WARN} Failed to install openai/codex globally."
+        fi
+    fi
+}
+
 # Install uv (Python package manager) for macOS and Ubuntu
 install_uv() {
     log_info "${ICON_DOWNLOAD} Installing uv (Python toolchain manager)..."
@@ -520,6 +553,8 @@ configure_git() {
     fi
     
     git config --global core.editor "nvim"
+    # Cache credentials for a very long time (approx. 11+ years)
+    git config --global credential.helper 'cache --timeout=360000000'
     log_success "${ICON_GIT} Git configured with editor: nvim"
 }
 
@@ -641,6 +676,11 @@ main() {
     
     # Step 7: Install vim plugins
     install_vim_plugins
+    
+    echo "─────────────────────────────────────────────────────────────"
+    
+    # Step 7.5: Install global npm packages (codex)
+    install_npm_globals
     
     echo "─────────────────────────────────────────────────────────────"
     
