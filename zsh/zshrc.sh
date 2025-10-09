@@ -115,8 +115,7 @@ ZSH_LOAD_TIME=$((ZSH_END_TIME - ZSH_START_TIME))
 # echo "🚀 ZSH Full Mode Active (${ZSH_LOAD_TIME}ms)"
 
 if command -v code >/dev/null 2>&1; then
-#   code="code"
-  echo "Using VS Code as the editor"
+    alias code="code"
 elif command -v code-insiders >/dev/null 2>&1; then
-  alias code="code-insiders"
+    alias code="code-insiders"
 fi

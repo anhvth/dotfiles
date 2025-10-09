@@ -27,6 +27,6 @@ Data flow: Setup scripts (setup.sh, setup_noninteractive.sh) install packages, c
 
 - **External tools**: fzf for fuzzy finding, ripgrep/silversearcher-ag for search, tmux for multiplexing
 - **Git**: Configured with user email/name during setup
-- **IPython**: Config copied from `tools/ipython_config.py`
+- **IPython**: Config copied from `default_configs/ipython_config.py`
 - **VS Code**: Codegen instructions from `copilot/code-gen.md` for Copilot settings</content>
   <parameter name="filePath">/home/anhvth5/dotfiles/agents.md

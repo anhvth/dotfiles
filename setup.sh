@@ -531,7 +531,7 @@ setup_dotfiles() {
     link_config "source-file $DOTFILES_DIR/tmux/tmux.conf" "${HOME}/.tmux.conf"
     
     # IPython
-    copy_file "${DOTFILES_DIR}/tools/ipython_config.py" \
+    copy_file "${DOTFILES_DIR}/default_configs/ipython_config.py" \
               "${HOME}/.ipython/profile_default/ipython_config.py"
     
     log_success "${ICON_CONFIG} Dotfiles configured."

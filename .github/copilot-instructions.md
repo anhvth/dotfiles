@@ -14,8 +14,8 @@ Quick orientation
   - `zsh/` — primary shell configs and helper functions (`zsh/functions.sh`,
     `zsh/zshrc.sh`, `zsh/zshrc_manager.sh`).
   - `vim/` — neovim config and installers (`nvimrc.vim`, `install.sh`).
-  - `custom-tools/` — small Python utilities and scripts (`pytools/`,
-    `ipython_config.py`).
+  - `custom-tools/` — small Python utilities and scripts (`pytools/`).
+  - `default_configs/` — default configuration files (`ipython_config.py`).
   - `bin/` — user scripts and app images; inspect before modifying.
 
 Conventions and patterns to follow (discoverable from files)
