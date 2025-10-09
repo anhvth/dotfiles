@@ -29,9 +29,9 @@ SHELL ["/bin/bash", "-c"]
 
 # Run setup script (using setup_noninteractive.sh if available, otherwise setup.sh)
 RUN if [ -f setup_noninteractive.sh ]; then \
-        bash setup_noninteractive.sh -y || true; \
+    bash setup_noninteractive.sh -y || true; \
     elif [ -f setup.sh ]; then \
-        bash setup.sh -y || true; \
+    bash setup.sh -y || true; \
     fi
 
 # Set working directory to user home
