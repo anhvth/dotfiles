@@ -35,6 +35,14 @@ else
     log_info "${ICON_CHECK} fzf already present. Skipping clone."
 fi
 
+if [[ ! -d "${HOME}/.oh-my-zsh" ]]; then
+    log_info "${ICON_DOWNLOAD} Installing oh-my-zsh..."
+    git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-zsh"
+    log_success "${ICON_DOWNLOAD} oh-my-zsh installed."
+else
+    log_info "${ICON_CHECK} oh-my-zsh already present. Skipping clone."
+fi
+
 log_info "${ICON_CONFIG} Copying IPython configuration..."
 bootstrap::copy_file "${DOTFILES_DIR}/tools/ipython_config.py" "${HOME}/.ipython/profile_default/ipython_config.py"
 

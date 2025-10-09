@@ -97,6 +97,21 @@ else
 fi
 echo "----------------------------------------"
 
+# Install oh-my-zsh
+echo "$ICON_INFO Installing oh-my-zsh..."
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    echo "$ICON_INFO oh-my-zsh directory (~/.oh-my-zsh) already exists. Skipping clone."
+else
+    echo "$ICON_INFO Cloning oh-my-zsh repository..."
+    if git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh; then
+        echo "$ICON_SUCCESS oh-my-zsh repository cloned successfully."
+    else
+        echo "$ICON_ERROR Failed to clone oh-my-zsh repository."
+        exit 1
+    fi
+fi
+echo "----------------------------------------"
+
 # 4. Set up Dotfiles
 echo "$ICON_INFO Setting up dotfiles configuration..."
 # Ensure dotfiles directory exists

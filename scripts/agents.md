@@ -17,8 +17,8 @@ Data flow: Bootstrap scripts use common.sh for logging/installation, smoke tests
 ## Conventions & Patterns
 
 - **Error handling**: set -euo pipefail for strict bash execution
-- **Logging**: Use ICON_* variables and log_* functions for consistent output
-- **Function naming**: bootstrap::* for reusable helpers (apt_install, link_config, etc.)
+- **Logging**: Use ICON*\* variables and log*\* functions for consistent output
+- **Function naming**: bootstrap::\* for reusable helpers (apt_install, link_config, etc.)
 - **Path handling**: SCRIPT_DIR and REPO_ROOT variables for relative paths
 
 ## Integration Points

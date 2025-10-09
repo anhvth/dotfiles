@@ -17,7 +17,7 @@ Data flow: Scripts executed directly or added to PATH for CLI usage.
 
 ## Conventions & Patterns
 
-- **Script structure**: Bash scripts with #!/bin/bash, Python scripts with if __name__ == "__main__"
+- **Script structure**: Bash scripts with #!/bin/bash, Python scripts with if **name** == "**main**"
 - **Error handling**: Try-except in Python, basic checks in bash
 - **Output**: Print progress/messages, write reports to files
 - **Dependencies**: Assume common tools (pylint for reports, shutil/os for file ops)

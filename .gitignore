@@ -16,3 +16,6 @@ code-server/config/extensions
 ripgrep_11.0.2_amd64.deb
 .vscode
 tools/bin/nvim
+
+# oh-my-zsh should be installed to ~/.oh-my-zsh, not stored in repo
+zsh/plugins/oh-my-zsh/

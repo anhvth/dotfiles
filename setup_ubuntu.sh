@@ -140,6 +140,19 @@ else
     log_error "${ICON_CONFIG} fzf installation script failed."
 fi
 
+# Install oh-my-zsh
+log_info "${ICON_DOWNLOAD} Installing oh-my-zsh..."
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    log_info "${ICON_CHECK} oh-my-zsh directory (~/.oh-my-zsh) already exists. Skipping clone."
+else
+    log_info "${ICON_GIT} Cloning oh-my-zsh repository..."
+    if git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh; then
+        log_success "${ICON_GIT} oh-my-zsh repository cloned successfully."
+    else
+        log_error "${ICON_GIT} Failed to clone oh-my-zsh repository."
+    fi
+fi
+
 
 # Install silver searcher (ag)
 check_and_install ag silversearcher-ag

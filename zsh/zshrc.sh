@@ -20,7 +20,7 @@ stty -ixon
 
 export VISUAL=vim
 export FUNCNEST=100000
-export ZSH="$HOME/dotfiles/zsh/plugins/oh-my-zsh"
+export ZSH="$HOME/.oh-my-zsh"
 
 # Full path configuration
 typeset -U path PATH
