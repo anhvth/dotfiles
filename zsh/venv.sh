@@ -9,6 +9,120 @@
 VENV_HISTORY_FILE="$HOME/.cache/dotfiles/venv_history"
 VENV_HISTORY_LIMIT=30
 
+# Persist VS Code Python interpreter without spamming jq errors
+_venv_update_vscode_python_path() {
+    local python_path="$1"
+    local settings_file=".vscode/settings.json"
+
+    [[ -f "$settings_file" ]] || return 1
+    [[ -n "$python_path" ]] || return 1
+
+    local err_file output status
+    err_file="$(mktemp "${TMPDIR:-/tmp}/vscode-settings.err.XXXXXX")" || return 1
+
+    output="$("$python_path" - "$settings_file" "$python_path" 2>"$err_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1])
+python_path = sys.argv[2]
+
+
+def strip_comments(source: str) -> str:
+    result = []
+    length = len(source)
+    i = 0
+    in_string = False
+    escape = False
+
+    while i < length:
+        ch = source[i]
+
+        if in_string:
+            result.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            result.append(ch)
+            i += 1
+            continue
+
+        if ch == '/' and i + 1 < length:
+            nxt = source[i + 1]
+            if nxt == '/':
+                i += 2
+                while i < length and source[i] not in '\n\r':
+                    i += 1
+                continue
+            if nxt == '*':
+                i += 2
+                while i + 1 < length and not (source[i] == '*' and source[i + 1] == '/'):
+                    i += 1
+                i += 2
+                continue
+
+        result.append(ch)
+        i += 1
+
+    return ''.join(result)
+
+
+try:
+    text = settings_path.read_text(encoding="utf-8")
+except FileNotFoundError:
+    print("UNCHANGED")
+    raise SystemExit(0)
+
+
+clean_text = strip_comments(text).strip()
+if clean_text:
+    try:
+        data = json.loads(clean_text)
+    except json.JSONDecodeError as exc:
+        print(f"invalid JSON: {exc}", file=sys.stderr)
+        raise SystemExit(1)
+else:
+    data = {}
+
+if not isinstance(data, dict):
+    print("settings.json must contain a JSON object", file=sys.stderr)
+    raise SystemExit(1)
+
+needs_update = data.get("python.defaultInterpreterPath") != python_path
+if needs_update:
+    data["python.defaultInterpreterPath"] = python_path
+    tmp_path = settings_path.with_suffix(settings_path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+    tmp_path.replace(settings_path)
+
+print("UPDATED" if needs_update else "UNCHANGED")
+PY
+)"
+    status=$?
+    if (( status != 0 )); then
+        local err_msg
+        err_msg="$(<"$err_file")"
+        rm -f "$err_file"
+        [[ -n "$err_msg" ]] && echo "⚠️  Unable to update VS Code settings: ${err_msg%%$'\n'*}"
+        return $status
+    fi
+
+    rm -f "$err_file"
+    if [[ "$output" == "UPDATED" ]]; then
+        echo "✅ Updated VS Code python.defaultInterpreterPath to $python_path"
+    fi
+    return 0
+}
+
 # Helper function to show usage
 _venv_show_help() {
     local func_name="$1"
@@ -228,6 +342,13 @@ venv-activate() {
     set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
     export VENV_AUTO_ACTIVATE="on"
     export VENV_AUTO_ACTIVATE_PATH="$activate_path"
+
+    # Update VS Code settings if present without triggering jq parse errors
+    local python_path
+    python_path=$(command -v python)
+    if [[ -n "$python_path" ]]; then
+        _venv_update_vscode_python_path "$python_path"
+    fi
 
     # Update history
     _venv_update_history "$activate_path"

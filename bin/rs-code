@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "Usage: rs-code user@host:/remote/path [--watch] [--sync-venv-remote]"
+  exit 1
+fi
+
+remote="$1"
+shift || true
+sync_venv_remote=false
+watch_mode=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --watch) watch_mode=true; shift ;;
+    --sync-venv-remote) sync_venv_remote=true; shift ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+if [[ -z "$repo_root" ]]; then
+  echo "❌ Not inside a git repository."
+  exit 1
+fi
+
+repo_name=$(basename "$repo_root")
+tmpdir="/tmp/rs-code-$repo_name"
+mkdir -p "$tmpdir"
+
+cfg_file="$tmpdir/sync.cfg"
+log_file="$tmpdir/rs-code.log"
+
+: "${PUSH_MAX_SIZE:=52428800}"     # 50 MB
+: "${VENVPULL_MAX_SIZE:=5242880}"  # 5 MB
+
+log() {
+  echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] [$1] $2" | tee -a "$log_file"
+}
+
+init_cfg() {
+  if [[ ! -f "$cfg_file" ]]; then
+    cat > "$cfg_file" <<EOF
+# rs-code sync configuration (auto-generated in /tmp)
+# Edit this file to customize includes/excludes.
+# Rsync-style filter rules.
+
+# Include everything by default
++ *
+
+# Ignore virtualenvs and node_modules
+- .venv/
+- node_modules/
+
+# Ignore large files (>50MB) dynamically
+EOF
+    log INFO "Generated default $cfg_file"
+  fi
+}
+
+build_filter() {
+  local filter_file="$tmpdir/filter"
+  > "$filter_file"
+
+  grep -v '^\s*#' "$cfg_file" | sed '/^\s*$/d' >> "$filter_file"
+
+  while IFS= read -r file; do
+    local full_path="$repo_root/$file"
+    if [[ -f "$full_path" ]]; then
+      local size
+      size=$(stat -f%z "$full_path" 2>/dev/null || stat -c%s "$full_path" 2>/dev/null || echo 0)
+      if [[ $size -gt $PUSH_MAX_SIZE ]]; then
+        echo "- $file" >> "$filter_file"
+        log WARN "Skipping large file ($(numfmt --to=iec $size)): $file"
+      fi
+    fi
+  done < <(git -C "$repo_root" ls-files --others --cached --exclude-standard)
+
+  echo "$filter_file"
+}
+
+sync_once() {
+  log INFO "🚀 rs-code: syncing $repo_root ↔ $remote"
+
+  init_cfg
+  local filter_file
+  filter_file=$(build_filter)
+
+  rsync -av --progress --delete \
+    --filter="merge $filter_file" \
+    "$repo_root"/ \
+    "$remote" 2> >(grep -v "No such file or directory" >&2) || true
+
+  if [[ "$sync_venv_remote" == "true" ]]; then
+    rsync -av --progress \
+      --filter="+ .venv/***" \
+      --filter="- *" \
+      --max-size=$VENVPULL_MAX_SIZE \
+      "$remote"/ \
+      "$repo_root"/ || true
+  fi
+
+  log INFO "✅ Sync complete"
+}
+
+watch_loop() {
+  if ! command -v fswatch >/dev/null 2>&1; then
+    log ERROR "Watch mode requires 'fswatch'. Install it via: brew install fswatch"
+    exit 1
+  fi
+
+  log INFO "👀 Watching $repo_root and $cfg_file for changes..."
+  fswatch -o "$repo_root" "$cfg_file" | while read -r; do
+    sync_once
+  done
+}
+
+if $watch_mode; then
+  watch_loop
+else
+  sync_once
+fi

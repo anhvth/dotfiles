@@ -83,11 +83,15 @@ if typeset -f _venv_auto_startup >/dev/null; then
     _venv_auto_startup
 fi
 
-# Autosuggestions with performance settings
-if [[ -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+# Autosuggestions with performance settings (check disable flag)
+if [[ ! -f ~/.auto_suggestion_disable && -f $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source $HOME/dotfiles/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
     ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE="20"
     ZSH_AUTOSUGGEST_USE_ASYNC=1
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+    ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+    # Accept suggestion with Ctrl+Space or Right Arrow
+    bindkey '^ ' autosuggest-accept
 fi
 
 # Syntax highlighting (always last for performance)
