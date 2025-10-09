@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
-
 
 ENV_FILE = Path.home() / ".env"
 
@@ -33,14 +31,14 @@ def write_env(lines: list[str]) -> None:
 
 
 def set_var(key: str, value: str) -> None:
-    lines = [l for l in read_env() if not l.startswith(f"{key}=")]
+    lines = [line for line in read_env() if not line.startswith(f"{key}=")]
     lines.append(f"{key}={value}")
     write_env(lines)
     print(f"Set {key}={value} in {ENV_FILE}")
 
 
 def unset_var(key: str) -> None:
-    lines = [l for l in read_env() if not l.startswith(f"{key}=")]
+    lines = [line for line in read_env() if not line.startswith(f"{key}=")]
     if len(lines) == len(read_env()):
         print(f"{key} not found in {ENV_FILE}")
         return
@@ -55,7 +53,9 @@ def list_vars() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="set-env", description="Manage simple KEY=VALUE entries in ~/.env")
+    parser = argparse.ArgumentParser(
+        prog="set-env", description="Manage simple KEY=VALUE entries in ~/.env"
+    )
     sub = parser.add_subparsers(dest="cmd")
 
     p_set = sub.add_parser("set", help="Set a variable")

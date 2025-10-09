@@ -1,6 +1,7 @@
 import json
 import os
 from typing import Optional
+
 import typer
 
 app = typer.Typer()
@@ -69,14 +70,14 @@ def setup_typing(
 
 def load_or_create_json(path: str) -> dict:
     if os.path.exists(path):
-        with open(path, "r") as file:
+        with open(path) as file:
             return json.load(file)
     return {}
 
 
 def load_or_create_toml(path: str) -> str:
     if os.path.exists(path):
-        with open(path, "r") as file:
+        with open(path) as file:
             return file.read()
     return ""
 

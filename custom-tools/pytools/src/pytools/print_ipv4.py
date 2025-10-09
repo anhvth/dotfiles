@@ -7,8 +7,8 @@ This tool fetches and displays the public IPv4 address using external services.
 
 import subprocess
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 
 
 def get_ip_via_curl():
@@ -51,13 +51,13 @@ def main():
     """Main entry point for the print-ipv4 command."""
     # Try multiple methods to get the IP
     ip = get_ip_via_curl()
-    
+
     if not ip:
         ip = get_ip_via_urllib()
-    
+
     if not ip:
         ip = get_ip_via_alternative()
-    
+
     if ip:
         print(ip)
         return 0

@@ -7,9 +7,8 @@ for termination using fzf fuzzy finder.
 """
 
 import os
-import subprocess
 import signal
-import sys
+import subprocess
 
 
 def kill_processes_grep():
@@ -20,13 +19,13 @@ def kill_processes_grep():
     except subprocess.CalledProcessError as e:
         print(f"Error getting process list: {e}")
         return 1
-    
+
     # Use fzf for fuzzy finding
     try:
         fzf_process = subprocess.Popen(
-            ["fzf", "--multi", "--header=Select processes to kill (use TAB for multi-select)"], 
-            stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, 
+            ["fzf", "--multi", "--header=Select processes to kill (use TAB for multi-select)"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             text=True
         )
         selected_processes, _ = fzf_process.communicate(input=ps_output)
@@ -41,12 +40,12 @@ def kill_processes_grep():
             try:
                 pid = line.split()[1]
                 pid_int = int(pid)
-                
+
                 # Don't kill PID 1 or our own process
                 if pid_int == 1 or pid_int == os.getpid():
                     print(f"Skipping critical process {pid}")
                     continue
-                    
+
                 os.kill(pid_int, signal.SIGTERM)
                 print(f"Killed process {pid}")
                 killed_count += 1
@@ -58,7 +57,7 @@ def kill_processes_grep():
                 print(f"Permission denied to kill process {pid}")
             except Exception as e:
                 print(f"Error killing process {pid}: {e}")
-    
+
     print(f"Killed {killed_count} processes")
     return 0
 

@@ -30,7 +30,7 @@ def main():
     parser.add_argument('num_workers', type=int, help='Number of parallel workers')
     parser.add_argument('--name', default='run_list_commands', help='Tmux session name')
     parser.add_argument(
-        '--gpus', 
+        '--gpus',
         default=os.environ.get('CUDA_VISIBLE_DEVICES', '0,1,2,3,4,5,6,7'),
         help='Comma-separated list of GPU IDs to use'
     )
@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
     args.done_log = f"/tmp/{args.name}.done"
     args.gpus = [int(x) for x in args.gpus.split(',')]
-    
+
     try:
         with open(args.listcmd) as f:
             list_commands = f.readlines()
@@ -50,12 +50,12 @@ def main():
     num_cpu = os.cpu_count()
     num_cpu_per_worker = num_cpu // args.num_workers
     workerid_to_range_cpu = {
-        i: [i * num_cpu_per_worker, (i + 1) * num_cpu_per_worker - 1] 
+        i: [i * num_cpu_per_worker, (i + 1) * num_cpu_per_worker - 1]
         for i in range(args.num_workers)
     }
 
     dict_tmux_id_to_list_commands = {i: [] for i in range(args.num_workers)}
-    
+
     for process_id, cmd in enumerate(list_commands):
         tmux_id = process_id % args.num_workers
         cpu_list = workerid_to_range_cpu[tmux_id]
@@ -63,7 +63,7 @@ def main():
         cmd = cmd.strip()
         if not cmd:
             continue
-            
+
         gpu = args.gpus[tmux_id % len(args.gpus)]
         cmd = f'CUDA_VISIBLE_DEVICES={gpu} taskset --cpu-list {cpu_list[0]}-{cpu_list[1]} {cmd}'
         dict_tmux_id_to_list_commands[tmux_id].append(cmd)
@@ -73,16 +73,16 @@ def main():
     for tmux_id, commands in dict_tmux_id_to_list_commands.items():
         if not commands:
             continue
-            
+
         cmd_file = f'/tmp/listcmd_{tmux_id}.txt'
         with open(cmd_file, 'w') as f:
             f.write('\n'.join(commands))
-        
+
         if tmux_id == 0:
             tmuxcmd = f"tmux new -s {args.name} -d 'sh {cmd_file}'"
         else:
             tmuxcmd = f"tmux new-window -t {args.name} -n 'window-{tmux_id}' 'sh {cmd_file}'"
-        
+
         print('Running:', tmuxcmd)
         if not args.dry_run:
             os.system(tmuxcmd)

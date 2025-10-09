@@ -4,23 +4,35 @@ import argparse
 import difflib
 import importlib
 import io
+import shutil
 import sys
-from contextlib import redirect_stdout, redirect_stderr
-from typing import Callable, List, Optional
+from contextlib import redirect_stderr, redirect_stdout
+from typing import Callable
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from . import __version__
 from .core.registry import Registry, Tool
 from .core.session import SessionLogger
 
-
 console = Console()
+_NO_COLOR = False
+_JSON_OUTPUT = False
+
+
+def set_global_flags(no_color: bool = False, json_output: bool = False) -> None:
+    """Set global output formatting flags."""
+    global _NO_COLOR, _JSON_OUTPUT, console
+    _NO_COLOR = no_color
+    _JSON_OUTPUT = json_output
+    if no_color:
+        console = Console(no_color=True, force_terminal=False)
 
 
 def _run_module_main(
-    main_func: Callable[[], int], prog: str, args: List[str], capture: bool
+    main_func: Callable[[], int], prog: str, args: list[str], capture: bool
 ) -> tuple[int, str, str]:
     orig_argv = sys.argv[:]
     sys.argv = [prog] + args
@@ -40,6 +52,105 @@ def _run_module_main(
     finally:
         sys.argv = orig_argv
     return code, stdout_buf.getvalue(), stderr_buf.getvalue()
+
+
+def _typer_app_wrapper(app, prog: str, args: list[str]) -> int:
+    """Wrapper for Typer apps to match main() signature."""
+    orig_argv = sys.argv[:]
+    sys.argv = [prog] + args
+    try:
+        app()
+        return 0
+    except SystemExit as e:
+        return int(e.code) if isinstance(e.code, int) else 1
+    except Exception as e:
+        sys.stderr.write(f"Error: {e}\n")
+        return 1
+    finally:
+        sys.argv = orig_argv
+
+
+def check_dependency(cmd: str) -> bool:
+    """Check if a command is available in PATH."""
+    return shutil.which(cmd) is not None
+
+
+def check_dependencies() -> dict[str, dict[str, str | bool]]:
+    """Check all external dependencies and return status."""
+    deps = {
+        "fzf": {
+            "required_by": ["kill-process-grep", "atv-select"],
+            "install": "https://github.com/junegunn/fzf#installation",
+        },
+        "tmux": {
+            "required_by": ["lsh"],
+            "install": "apt install tmux / brew install tmux",
+        },
+        "wget": {
+            "required_by": ["hf-down"],
+            "install": "apt install wget / brew install wget",
+        },
+        "pyright": {
+            "required_by": ["report-error"],
+            "install": "npm install -g pyright",
+        },
+    }
+
+    results = {}
+    for cmd, info in deps.items():
+        results[cmd] = {
+            "available": check_dependency(cmd),
+            "required_by": ", ".join(info["required_by"]),
+            "install": info["install"],
+        }
+    return results
+
+
+def run_doctor() -> int:
+    """Check system dependencies and provide remediation guidance."""
+    console.print(Panel("PyTools Dependency Check", border_style="cyan", expand=False))
+
+    deps = check_dependencies()
+
+    table = Table(title="Dependency Status", show_lines=False)
+    table.add_column("Tool", style="bold")
+    table.add_column("Status")
+    table.add_column("Required By")
+    table.add_column("Install Guide")
+
+    all_good = True
+    for cmd, info in deps.items():
+        status = (
+            "[green]✓ Available[/green]"
+            if info["available"]
+            else "[red]✗ Missing[/red]"
+        )
+        if not info["available"]:
+            all_good = False
+        table.add_row(cmd, status, str(info["required_by"]), str(info["install"]))
+
+    console.print(table)
+
+    # Check Python environment
+    console.print("\n[bold]Python Environment:[/bold]")
+    console.print(f"  Python: {sys.version.split()[0]}")
+    console.print(f"  Executable: {sys.executable}")
+
+    # Check pytools installation
+    try:
+        import pytools
+
+        console.print(f"  PyTools: {pytools.__version__}")
+    except Exception as e:
+        console.print(f"  PyTools: [red]Error - {e}[/red]")
+
+    if all_good:
+        console.print("\n[green]✓ All dependencies are available![/green]")
+        return 0
+    else:
+        console.print("\n[yellow]⚠ Some dependencies are missing.[/yellow]")
+        console.print("Install missing dependencies to use all features.")
+        return 1
 
 
 def build_registry() -> Registry:
@@ -139,6 +250,48 @@ def build_registry() -> Registry:
         )
     )
 
+    # report-error
+    from . import report_error as _rep
+
+    reg.add(
+        Tool(
+            name="report-error",
+            summary="Report Pylance/Pyright errors to JSON file",
+            runner=lambda a: _typer_app_wrapper(_rep.app, "report-error", a),
+            usage="report-error <file_path> [--output-file FILE] [--json-format] [--verbose]",
+            tags=["dev", "typing"],
+            safety="write",
+        )
+    )
+
+    # setup-typing
+    from . import setup_typing as _typing
+
+    reg.add(
+        Tool(
+            name="setup-typing",
+            summary="Configure typing and linting for a Python project",
+            runner=lambda a: _typer_app_wrapper(_typing.app, "setup-typing", a),
+            usage="setup-typing [--python-version 3.11] [--type-checking-mode basic]",
+            tags=["dev", "typing", "config"],
+            safety="write",
+        )
+    )
+
+    # set-env
+    from . import set_env as _env
+
+    reg.add(
+        Tool(
+            name="set-env",
+            summary="Manage KEY=VALUE entries in ~/.env",
+            runner=lambda a: _run_module_main(_env.main, "set-env", a, capture=True)[0],
+            usage="set-env {set KEY VALUE | unset KEY | list}",
+            tags=["config", "env"],
+            safety="write",
+        )
+    )
+
     # utilities in cli_utils
     from . import cli_utils as _utils
 
@@ -187,6 +340,23 @@ def build_registry() -> Registry:
 
 
 def render_tools(reg: Registry) -> None:
+    """Display all available tools in a formatted table."""
+    if _JSON_OUTPUT:
+        import json
+
+        tools_data = [
+            {
+                "name": t.name,
+                "summary": t.summary,
+                "usage": t.usage or t.name,
+                "safety": t.safety,
+                "tags": t.tags,
+            }
+            for t in reg.list()
+        ]
+        print(json.dumps(tools_data, indent=2))
+        return
+
     table = Table(title="PyTools – Available Commands", show_lines=False)
     table.add_column("Name", style="bold cyan")
     table.add_column("Summary")
@@ -197,74 +367,80 @@ def render_tools(reg: Registry) -> None:
     console.print(table)
 
 
-def run_tool(reg: Registry, logger: SessionLogger, name: str, args: List[str]) -> int:
+def run_tool(reg: Registry, logger: SessionLogger, name: str, args: list[str]) -> int:
+    """Execute a tool by name with given arguments."""
     tool = reg.get(name)
     if not tool:
         console.print(f"[red]Unknown tool:[/red] {name}")
+        if not _NO_COLOR:
+            matches = difflib.get_close_matches(name, reg.names(), n=3)
+            if matches:
+                console.print(f"[yellow]Did you mean:[/yellow] {', '.join(matches)}")
         return 1
-    logger.log("invoke", tool=name, args=args)
+
+    logger.log("invoke", tool=name, args=args, safety=tool.safety)
 
     if tool.passthrough:
         code = tool.runner(args)
         logger.log("result", tool=name, rc=code)
         return code
 
-    # capture output for nice rendering
-    # Re-run using module import path via helper in build_registry
-    # The runner returns only rc when capture=True; re-run a parallel capture here
-    # by importing module again and invoking with capture to obtain buffers.
-    # To avoid duplicating import, we wrap with a small hack: rebind to _run_module_main.
-    # Instead, call the module directly by name if available.
-    # As our runner with capture already returns rc only, replicate capture locally.
+    # For non-passthrough tools, capture output
+    # Rebuild the execution to capture stdout/stderr
+    module_map = {
+        "hf-down": (importlib.import_module("pytools.hf_down").main, "hf-down"),
+        "cat-projects": (
+            importlib.import_module("pytools.cat_projects").main,
+            "cat-projects",
+        ),
+        "print-ipv4": (
+            importlib.import_module("pytools.print_ipv4").main,
+            "print-ipv4",
+        ),
+        "organize-downloads": (
+            importlib.import_module("pytools.organize_downloads").main,
+            "organize-downloads",
+        ),
+        "pyinit": (importlib.import_module("pytools.cli_utils").pyinit, "pyinit"),
+        "set-env": (importlib.import_module("pytools.set_env").main, "set-env"),
+    }
 
-    # Approach: temporarily patch runner to return rc,stdout,stderr by introspection is fragile;
-    # easier: call again using known modules through registry. For simplicity, just invoke runner
-    # while redirecting global stdout/stderr (already supported when capture=True in registry setup).
-
-    # We rebuild capture by importing name→module map for known tools
-    # Fallback to simply running and not capturing if unsupported
     try:
-        # Map names to module main functions for capture
-        module_map = {
-            "hf-down": (importlib.import_module("pytools.hf_down").main, "hf-down"),
-            "cat-projects": (
-                importlib.import_module("pytools.cat_projects").main,
-                "cat-projects",
-            ),
-            "print-ipv4": (
-                importlib.import_module("pytools.print_ipv4").main,
-                "print-ipv4",
-            ),
-            "organize-downloads": (
-                importlib.import_module("pytools.organize_downloads").main,
-                "organize-downloads",
-            ),
-            "pyinit": (importlib.import_module("pytools.cli_utils").pyinit, "pyinit"),
-        }
         if name in module_map:
             main_func, prog = module_map[name]
             rc, out, err = _run_module_main(main_func, prog, args, capture=True)
-            if out:
+            if out and not _JSON_OUTPUT:
                 console.print(
                     Panel.fit(out, title=f"{name} output", border_style="green")
                 )
+            elif out:
+                print(out, end="")
             if err:
-                console.print(
-                    Panel.fit(err, title=f"{name} stderr", border_style="yellow")
-                )
-            logger.log("result", tool=name, rc=rc, stdout=out, stderr=err)
+                if not _NO_COLOR:
+                    err_console = Console(stderr=True, no_color=_NO_COLOR)
+                    err_console.print(
+                        Panel.fit(err, title=f"{name} stderr", border_style="yellow")
+                    )
+                else:
+                    sys.stderr.write(err)
+            logger.log(
+                "result", tool=name, rc=rc, stdout_len=len(out), stderr_len=len(err)
+            )
             return rc
-        # default passthrough
+
+        # For Typer apps and others, just run through runner
         code = tool.runner(args)
         logger.log("result", tool=name, rc=code)
         return code
-    except Exception as e:  # noqa: BLE001
-        console.print(f"[red]Failed to run {name}:[/red] {e}")
+    except Exception as e:
+        err_console = Console(stderr=True, no_color=_NO_COLOR)
+        err_console.print(f"[red]Failed to run {name}:[/red] {e}")
         logger.log("error", tool=name, error=str(e))
         return 1
 
 
 def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
+    """Run an interactive REPL for tool execution."""
     # Try prompt_toolkit, fallback to input()
     try:
         from prompt_toolkit import PromptSession
@@ -272,7 +448,8 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
         from prompt_toolkit.history import InMemoryHistory
 
         completer = WordCompleter(
-            reg.names() + ["help", "list", "run", "exit", "quit"], ignore_case=True
+            reg.names() + ["help", "list", "run", "exit", "quit", "doctor"],
+            ignore_case=True,
         )
         session = PromptSession(history=InMemoryHistory())
 
@@ -297,6 +474,9 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
             if cmd == "list":
                 render_tools(reg)
                 continue
+            if cmd == "doctor":
+                run_doctor()
+                continue
             if cmd.startswith("help"):
                 parts = cmd.split()
                 if len(parts) == 1:
@@ -306,7 +486,7 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
                     if t:
                         console.print(
                             Panel(
-                                f"{t.summary}\n\nUsage: {t.usage or t.name}",
+                                f"{t.summary}\n\nUsage: {t.usage or t.name}\n\nSafety: {t.safety}\nTags: {', '.join(t.tags)}",
                                 title=t.name,
                                 border_style="blue",
                             )
@@ -341,7 +521,7 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
             rc = run_tool(reg, logger, name, args)
             if rc != 0:
                 console.print(f"[red]Return code:[/red] {rc}")
-    except Exception:
+    except ImportError:
         # basic loop
         console.print("Prompt toolkit unavailable, falling back to basic mode.")
         print("Type 'list' to see tools. 'exit' to quit.")
@@ -358,6 +538,9 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
             if cmd == "list":
                 render_tools(reg)
                 continue
+            if cmd == "doctor":
+                run_doctor()
+                continue
             parts = cmd.split()
             name = parts[0]
             args = parts[1:]
@@ -365,15 +548,28 @@ def interactive_loop(reg: Registry, logger: SessionLogger) -> int:
                 print(f"Unknown command: {name}")
                 continue
             run_tool(reg, logger, name, args)
+    return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        prog="pytools", description="Unified interactive CLI for pytools"
+        prog="pytools",
+        description="Unified interactive CLI for pytools",
+        epilog="Use 'pytools list' to see all available tools.",
     )
+    parser.add_argument("--version", action="version", version=f"pytools {__version__}")
+    parser.add_argument(
+        "--no-color", action="store_true", help="Disable colored output"
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Output in JSON format where applicable"
+    )
+
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("list", help="List available tools")
+    sub.add_parser("doctor", help="Check system dependencies")
 
     p_run = sub.add_parser("run", help="Run a tool directly")
     p_run.add_argument("tool")
@@ -382,12 +578,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub.add_parser("interactive", help="Start interactive session (default)")
 
     args = parser.parse_args(argv)
+
+    # Set global flags
+    set_global_flags(no_color=args.no_color, json_output=args.json)
+
     reg = build_registry()
     logger = SessionLogger()
 
     if args.cmd == "list":
         render_tools(reg)
         return 0
+    if args.cmd == "doctor":
+        return run_doctor()
     if args.cmd == "run":
         return run_tool(reg, logger, args.tool, list(args.args))
 

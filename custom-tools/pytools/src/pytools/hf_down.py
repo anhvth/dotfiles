@@ -24,14 +24,14 @@ def download_file(url, save_name=None):
     try:
         # Transform the URL if necessary
         url = transform_url(url)
-        
+
         # Construct the wget command
         command = ['wget', url]
-        
+
         # If save_name is provided, add the '-O' option to the command
         if save_name:
             command += ['-O', save_name]
-        
+
         # Execute the command
         subprocess.run(command, check=True)
         print(f"Download completed: {url}")
@@ -50,12 +50,12 @@ def main():
         print("Usage: hf-down <URL> [SAVE_NAME]")
         print("Download files from Hugging Face Hub")
         return 1
-    
+
     url = sys.argv[1]
     # Remove query parameters if present
     url = url.split("?")[0]
     save_name = sys.argv[2] if len(sys.argv) == 3 else None
-    
+
     return download_file(url, save_name)
 
 

@@ -1,6 +1,6 @@
 # PyTools
 
-A modern, unified CLI for development utilities and dotfiles management. One command to rule them all! ????
+A modern, unified CLI for development utilities and dotfiles management. One command to rule them all! 🚀
 
 ## Quick Start
 
@@ -12,18 +12,21 @@ uv pip install -e .
 # Try it out
 pytools              # Interactive mode
 pytools list         # Show all tools
+pytools doctor       # Check dependencies
 pytools run <tool>   # Run a specific tool
 ```
 
-???? **[Read the Quickstart Guide](docs/quickstart.md)** for a complete walkthrough!
+📚 **[Read the Quickstart Guide](docs/quickstart.md)** for a complete walkthrough!
 
-## What's New in v0.2.0
+## What's New in v0.3.0
 
-??? **Single Entry Point**: All tools accessible via one `pytools` command  
-???? **Interactive Mode**: Fuzzy search, tab completion, and contextual help  
-???? **Modern UX**: Rich terminal output with colors and formatting  
-???? **Test Coverage**: 43 tests with 79% coverage on core CLI  
-???? **Better Docs**: Comprehensive quickstart guide and examples
+✨ **Enhanced Safety**: Dry-run and confirmation prompts for destructive operations  
+🔧 **Dependency Doctor**: Check system dependencies with remediation guidance  
+⚙️ **Configuration System**: Centralized config in `~/.config/pytools/`  
+🎯 **More Tools**: Added `report-error`, `setup-typing`, and `set-env`  
+📊 **Better organize-downloads**: Preview, filters, and flexible sorting options  
+🧪 **Test Suite**: 14 passing tests covering core functionality  
+📖 **Complete Docs**: Quickstart guide and auto-generated CLI reference
 
 ## Installation
 
@@ -58,8 +61,9 @@ pytools
 
 This opens a friendly prompt where you can:
 
-- Type \`list\` to see all available tools
-- Type \`help <tool>\` to get help for a specific tool
+- Type `list` to see all available tools
+- Type `doctor` to check system dependencies
+- Type `help <tool>` to get help for a specific tool
 - Run any tool directly by name
 - Get fuzzy match suggestions for typos
 - Use tab completion
@@ -69,65 +73,79 @@ This opens a friendly prompt where you can:
 Run tools directly without the interactive prompt:
 
 ```bash
-pytools list                    # Show all tools
+pytools --version               # Show version
+pytools --json list             # JSON output
+pytools --no-color list         # Plain text output
+pytools doctor                  # Check dependencies
 pytools run print-ipv4          # Get your public IP
 pytools run cat-projects ./src  # Create code snapshot
 ```
 
 ## Available Tools
 
-PyTools includes 10+ utilities organized by category:
+PyTools includes 13 utilities organized by category:
+
+### Development Tools
+
+- **cat-projects** - Create code snapshots for LLMs
+- **pyinit** - Initialize Python projects with VSCode settings
+- **setup-typing** - Configure typing and linting for Python projects
+- **report-error** - Report Pylance/Pyright errors to JSON
 
 ### System Utilities
 
 - **lsh** - Execute commands in parallel using tmux with CPU/GPU assignment
 - **kill-process-grep** - Interactive process killer using fzf
-- **print-ipv4** - Display public IPv4 address
-- **organize-downloads** - Organize downloads folder by creation date
-
-### Development Tools
-
-- **cat-projects** - Create code snapshots for LLMs
-- **hf-down** - Download files from Hugging Face Hub
-- **pyinit** - Initialize Python projects with VSCode settings
-- **atv-select** - Select and activate virtualenv
+- **organize-downloads** - Organize downloads folder by date (with dry-run, filters, preview)
 
 ### Network Tools
 
+- **print-ipv4** - Display public IPv4 address
+- **hf-down** - Download files from Hugging Face Hub
 - **keep-ssh** - Keep SSH connections alive
-- **print-ipv4** - Show public IP address
+
+### Configuration Tools
+
+- **set-env** - Manage KEY=VALUE entries in ~/.env
+- **atv-select** - Select and activate virtualenv from history
 
 ## Examples
 
 ```bash
 # Interactive exploration
 $ pytools
-pytools> list              # See all tools
-pytools> help cat-projects # Get help
-pytools> cat-projects ./src -e .py,.md  # Run it
+pytools> list                    # See all tools
+pytools> doctor                  # Check dependencies
+pytools> help organize-downloads # Get detailed help
+pytools> organize-downloads --dry-run  # Preview what would happen
 pytools> exit
 
-# Direct execution
+# Direct execution with safety
+$ pytools run organize-downloads --dry-run    # Preview organization
+$ pytools run organize-downloads --yes        # Organize with confirmation skipped
+$ pytools run organize-downloads --pattern "*.pdf"  # Only PDFs
+
+# Development workflow
+$ pytools run setup-typing --python-version 3.11
+$ pytools run report-error src/main.py --output-file errors.json
 $ pytools run cat-projects ./src -e .py > snapshot.txt
-$ pytools run print-ipv4
-$ pytools run hf-down https://huggingface.co/model/file.bin
+
+# Configuration management
+$ pytools run set-env set API_KEY mykey123
+$ pytools run set-env list
 ```
 
-## Creating Aliases (Optional)
+## Global Flags
 
-If you prefer the old-style individual commands, create aliases:
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-alias lsh='pytools run lsh'
-alias cat-projects='pytools run cat-projects'
-alias hf-down='pytools run hf-down'
-```
+- `--version` - Show PyTools version
+- `--no-color` - Disable colored output (for scripting)
+- `--json` - Output in JSON format where applicable (for `list` command)
 
 ## Documentation
 
 - **[Quickstart Guide](docs/quickstart.md)** - Complete walkthrough for new users
-- **[Modern CLI Plan](docs/modern_cli_plan.md)** - Architecture and roadmap
+- **[CLI Reference](docs/CLI.md)** - Detailed documentation for all tools
+- **[Modernization Plan](plans/00_mordernize.md)** - Architecture and roadmap
 
 ## Development
 
@@ -146,49 +164,49 @@ pytest tests/ --cov=src/pytools --cov-report=term-missing
 
 ### Test Coverage
 
-- **43 tests** covering registry, runner, and interactive mode
-- **79% coverage** on core CLI module
-- **100% coverage** on registry module
-- **97% coverage** on session logger
+- **14 tests** covering registry, CLI, and session logging
+- Tests validate: tool registration, CLI flags, JSON output, session logging
 
 ## Dependencies
 
-- \`loguru\` - Enhanced logging
-- \`rich\` - Beautiful terminal output
-- \`prompt_toolkit\` - Interactive prompts and completion
+Core dependencies:
 
-Some tools require external utilities:
+- `loguru` - Enhanced logging
+- `rich` - Beautiful terminal output
+- `prompt_toolkit` - Interactive prompts and completion
+- `typer` - CLI framework for some tools
 
-- \`fzf\` - For \`kill-process-grep\` and \`atv-select\`
-- \`tmux\` - For \`lsh\`
-- \`wget\` - For \`hf-down\`
+External tools (optional, checked by `pytools doctor`):
 
-## Migration from v0.1.x
+- `fzf` - For `kill-process-grep` and `atv-select`
+- `tmux` - For `lsh`
+- `wget` - For `hf-down`
+- `pyright` - For `report-error`
 
-Previously, each tool had its own command. Now they're all unified:
+## Configuration
 
-**Before:**
+PyTools stores configuration in `~/.config/pytools/`:
 
-```bash
-lsh commands.txt 4
-cat-projects ./src
-hf-down <url>
-```
+- `config.toml` - User configuration (optional)
+- `sessions/` - Session logs for audit trail
+- `venv_history` - Virtual environment activation history
 
-**After (both work):**
+Set `PYTOOLS_CONFIG_DIR` to override the config directory.
 
-```bash
-# Option 1: Interactive
-pytools
-pytools> lsh commands.txt 4
+## Safety Levels
 
-# Option 2: Direct
-pytools run lsh commands.txt 4
-pytools run cat-projects ./src
-pytools run hf-down <url>
-```
+Tools are classified by safety:
 
-The old individual commands are **removed** to simplify installation and reduce CLI clutter.
+- **safe** - Read-only operations (e.g., `print-ipv4`, `cat-projects`)
+- **write** - Create/modify files (e.g., `pyinit`, `setup-typing`)
+- **destructive** - Move/delete operations (e.g., `organize-downloads`)
+- **interactive** - Require user interaction (e.g., `kill-process-grep`, `lsh`)
+
+Destructive tools support:
+
+- `--dry-run` - Preview changes without making them
+- `--yes` / `-y` - Skip confirmation prompts
+- Preview tables showing what will change
 
 ## License
 
@@ -198,7 +216,8 @@ MIT
 
 Contributions welcome! Please:
 
-1. Follow TDD (test-driven development)
+1. Follow the modernization plan in `plans/00_mordernize.md`
 2. Add tests for new features
 3. Update documentation
 4. Keep the single entry point philosophy
+5. Use `--dry-run` for destructive operations

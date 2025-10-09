@@ -95,7 +95,7 @@ htmlcov/
         default_settings_file = script_dir / "vscode_settings" / "default_python.json"
 
         if default_settings_file.exists():
-            with open(default_settings_file, "r") as f:
+            with open(default_settings_file) as f:
                 default_settings = json.load(f)
 
             with open(settings_file, "w") as f:
@@ -122,9 +122,9 @@ htmlcov/
 
 def keep_ssh():
     """Keep SSH connections alive by running a persistent connection."""
-    import time
     import signal
     import sys
+    import time
 
     def signal_handler(sig, frame):
         print("\nSSH keep-alive stopped")
@@ -248,7 +248,7 @@ Dependencies:
 Note: This is a Python implementation that calls the shell function 'venv-select'.
 For full virtual environment management, use the shell commands directly:
 - va, venv-activate: Activate environment
-- vd, venv-deactivate: Deactivate environment  
+- vd, venv-deactivate: Deactivate environment
 - vc, venv-create: Create new environment
 - vs, venv-select: Select from history (same as this command)
 - vl, venv-list: List all environments

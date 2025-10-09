@@ -26,7 +26,7 @@ except ImportError:
 # Configuration
 DEFAULT_EXTS: Tuple[str, ...] = (".py",)
 DEFAULT_IGNORES: Tuple[str, ...] = (
-    ".venv", "venv", "__pycache__", ".git", ".mypy_cache", 
+    ".venv", "venv", "__pycache__", ".git", ".mypy_cache",
     ".FOLDER", "node_modules", "demo", "legacy",
 )
 MAX_LINE_LEN = 120
@@ -62,25 +62,25 @@ When invoked:
 
 📦 Response Format (PR-style)
 
-🧠 Title  
+🧠 Title
 Short summary (e.g. "Add file upload validation to admin panel")
 
-📊 Overview (Workflow Graph)  
-Structured flow, e.g.:  
+📊 Overview (Workflow Graph)
+Structured flow, e.g.:
 [User Action] → [UI Component] → [API] → [Service] → [DB]
 
-🪲 Problem / Request  
+🪲 Problem / Request
 Description of the feature, bug, or goal
 
-📁 Affected Files & Instructions  
-- path: src/pages/AdminUpload.tsx  
-  section: handleUpload()  
+📁 Affected Files & Instructions
+- path: src/pages/AdminUpload.tsx
+  section: handleUpload()
   change: Add client-side validation before POST
 
-💡 Suggested Changes  
+💡 Suggested Changes
 Step-by-step Copilot instructions
 
-✅ Done When  
+✅ Done When
 Expected success criteria (e.g. validation error shown, data saved)
 
 ---
@@ -94,19 +94,19 @@ When invoked:
 
 📦 Response Format
 
-🧠 Summary  
+🧠 Summary
 High-level finding (e.g. "UI components are too tightly coupled to API calls")
 
-📊 Dependency Graph  
+📊 Dependency Graph
 Component/function map (indented or text-based)
 
-🧩 Key Observations  
+🧩 Key Observations
 Top 3 insights about architecture or code health
 
-💡 Suggested Refactors  
+💡 Suggested Refactors
 Concrete steps to improve structure with justification
 
-⚠️ Code Smells  
+⚠️ Code Smells
 List of duplication, nested logic, bloated components, etc.
 
 ---
@@ -118,7 +118,7 @@ When this framework is used, the full project source code will follow this instr
 ---
 
 ✅ Example usage:
-  • Please /PR a flow for file uploads with Copilot  
+  • Please /PR a flow for file uploads with Copilot
   • Can you /ANALYZE the dashboard module for tight coupling or bloated components?
 """
 
@@ -292,8 +292,8 @@ def main():
         help="Comma‑separated list of file extensions (default: .py).",
     )
     parser.add_argument(
-        "-s", "--summarise", 
-        action="store_true", 
+        "-s", "--summarise",
+        action="store_true",
         help="Summarise Python files."
     )
     parser.add_argument(
@@ -307,7 +307,7 @@ def main():
         default="",
         help="Comma‑separated list of additional substrings to ignore.",
     )
-    
+
     args = parser.parse_args()
 
     paths = [Path(p) for p in args.paths]
@@ -323,7 +323,7 @@ def main():
         workers=args.workers,
         ignore_patterns=ignore_patterns,
     )
-    
+
     sys.stdout.write(snapshot)
     return 0
 

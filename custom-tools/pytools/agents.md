@@ -27,6 +27,14 @@ Data flow: CLI → Registry lookup → Tool runner → Session log. Tools are ca
 - **Import style**: Relative imports within pytools package; external deps like `rich` for UI, `loguru` for logging
 - **Error handling**: Tools return exit codes; CLI captures stdout/stderr for non-interactive tools
 
+## Coding Standards
+
+- **Type Hints**: Use Python type annotations for all function and method signatures to ensure clarity and maintainability.
+- **Logging**: Use `loguru` for consistent, structured, and readable logging across the project.
+- **Documentation**: Include docstrings for all public functions and classes. Maintain clear, user-focused documentation in the `README` and `docs/` directories.
+- **Ruff**: Run `ruff . --fix` for linting and auto-formatting. **Only return code to the user once all checks pass.**
+- **Code Quality**: Treat code as a living document — keep it clean, well-typed, and easy to understand. Use clear, descriptive, and consistent variable names. Follow a logical, top-down structure in code organization.
+
 ## Integration Points
 
 - **External tools**: `fzf` for fuzzy selection, `tmux` for parallel execution, `wget` for downloads
