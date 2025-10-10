@@ -72,7 +72,9 @@ def test_build_registry():
         "kill-process-grep",
         "keep-ssh",
         "atv-select",
-        "set-env",
+        "env-set",
+        "env-unset",
+        "env-list",
         "setup-typing",
         "report-error",
     ]

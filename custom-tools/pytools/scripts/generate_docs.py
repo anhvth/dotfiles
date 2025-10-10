@@ -48,16 +48,18 @@ def generate_cli_docs():
 def get_examples(tool_name: str) -> str:
     """Get example usage for a tool."""
     examples_map = {
-        "cat-projects": "# Snapshot Python project\npytools run cat-projects src/ -e .py\n\n# With AI summarization\npytools run cat-projects . --summarise",
+    "cat-projects": "# Snapshot Python project\npytools run cat-projects src/ --extensions .py\n\n# With AI summarization\npytools run cat-projects . --summarize",
         "pyinit": "# Create a new project\npytools run pyinit my-project\n\n# With virtual environment\npytools run pyinit my-project --venv",
         "organize-downloads": "# Preview organization\npytools run organize-downloads --dry-run\n\n# Organize by modified date\npytools run organize-downloads --by modified --yes\n\n# Organize only PDFs\npytools run organize-downloads --pattern '*.pdf'",
         "print-ipv4": "pytools run print-ipv4",
         "hf-down": "pytools run hf-down https://huggingface.co/username/model/resolve/main/file.bin",
-        "lsh": "# Create commands file\necho 'python train.py --seed 1' > cmds.txt\necho 'python train.py --seed 2' >> cmds.txt\n\n# Run in parallel\npytools run lsh cmds.txt 2 --gpus 0,1",
+        "lsh": "# Create commands file\necho 'python train.py --seed 1' > cmds.txt\necho 'python train.py --seed 2' >> cmds.txt\n\n# Run in parallel with a named session\npytools run lsh cmds.txt 2 --session-name training --gpus 0,1\n\n# Preview without launching tmux\npytools run lsh cmds.txt 2 --dry-run",
         "kill-process-grep": "pytools run kill-process-grep",
         "keep-ssh": "# Keep connection alive\npytools run keep-ssh user@server\n\n# Custom interval\npytools run keep-ssh user@server --interval 30 --verbose",
         "atv-select": "pytools run atv-select",
-        "set-env": "# Set variable\npytools run set-env set API_KEY mykey\n\n# List all\npytools run set-env list\n\n# Remove\npytools run set-env unset API_KEY",
+    "env-set": "pytools run env-set API_TOKEN secret",
+    "env-unset": "pytools run env-unset API_TOKEN",
+    "env-list": "pytools run env-list",
         "setup-typing": "# Setup with defaults\npytools run setup-typing\n\n# Custom Python version\npytools run setup-typing --python-version 3.11 --type-checking-mode strict",
         "report-error": "pytools run report-error src/main.py --output-file errors.json",
     }

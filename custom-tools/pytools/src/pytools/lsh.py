@@ -1,92 +1,161 @@
 #!/usr/bin/env python3
-"""
-List Shell (lsh) - Execute commands in parallel using tmux with CPU and GPU assignment.
+"""List Shell (lsh) - Run command lists in parallel inside tmux.
 
-This tool takes a list of commands and executes them in parallel across multiple
-tmux windows, with automatic CPU core and GPU assignment per worker.
+This utility reads a text file containing shell commands (one per line) and
+opens a tmux window per worker. Each window runs a queue of commands while
+pinning them to specific CPU cores and GPUs. It is tailored for ML workflows
+where you want reproducible GPU assignment without hand-managing tmux panes.
 """
 
 import argparse
 import os
+import shutil
+from pathlib import Path
 from typing import Literal
 
 
 def main() -> Literal[1] | Literal[0]:
-    """
-    Executes a list of commands in parallel using tmux.
-
-    This function takes command-line arguments and performs the following steps:
-    1. Parses the command-line arguments using `argparse`.
-    2. Reads the list of commands from a file specified by the `listcmd` argument.
-    3. Divides the available CPU cores among the specified number of workers.
-    4. Assigns a GPU to each worker based on the available GPUs and the worker's ID.
-    5. Generates a list of commands for each worker, with appropriate GPU and CPU assignments.
-    6. Writes the list of commands for each worker to separate files.
-    7. Executes the commands using `tmux` in parallel.
-    """
+    """Entry point for the lsh CLI."""
     parser = argparse.ArgumentParser(
-        description="Execute commands in parallel using tmux with CPU/GPU assignment"
+        description=(
+            "Run commands from a file in parallel using tmux. Each worker gets "
+            "its own tmux window plus dedicated CPU cores and GPU assignment."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  lsh commands.txt 4 --name research --gpus 0,1,2,3\n"
+            "  lsh runs.txt 2 --dry-run  # show the tmux commands without running"
+        ),
     )
-    parser.add_argument('listcmd', help='File containing list of commands to execute')
-    parser.add_argument('num_workers', type=int, help='Number of parallel workers')
-    parser.add_argument('--name', default='run_list_commands', help='Tmux session name')
+    parser.add_argument(
+        "commands_file",
+        metavar="COMMANDS_FILE",
+        type=Path,
+        help="Text file with one shell command per line",
+    )
+    parser.add_argument(
+        "workers",
+        metavar="WORKERS",
+        type=int,
+        help="Number of parallel workers (each worker becomes a tmux window)",
+    )
+    parser.add_argument(
+        "--name",
+        "--session-name",
+        dest="session_name",
+        default="run_list_commands",
+        help="Name of the tmux session that will be created",
+    )
     parser.add_argument(
         '--gpus',
         default=os.environ.get('CUDA_VISIBLE_DEVICES', '0,1,2,3,4,5,6,7'),
-        help='Comma-separated list of GPU IDs to use'
+        help='Comma-separated list of GPU IDs to cycle through per worker',
     )
-    parser.add_argument('--dry-run', action='store_true', help='Show commands without executing')
+    parser.add_argument(
+        "--cpu-per-worker",
+        type=int,
+        default=None,
+        help=(
+            "Limit each worker to this many CPU cores (defaults to sharing all cores evenly)"
+        ),
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Print the tmux commands that would run without launching tmux',
+    )
 
     args = parser.parse_args()
-    args.done_log = f"/tmp/{args.name}.done"
-    args.gpus = [int(x) for x in args.gpus.split(',')]
 
-    try:
-        with open(args.listcmd) as f:
-            list_commands = f.readlines()
-    except FileNotFoundError:
-        print(f"Error: Command file '{args.listcmd}' not found")
+    if args.workers < 1:
+        print("Error: WORKERS must be at least 1")
         return 1
 
-    num_cpu = os.cpu_count()
-    num_cpu_per_worker = num_cpu // args.num_workers
-    workerid_to_range_cpu = {
-        i: [i * num_cpu_per_worker, (i + 1) * num_cpu_per_worker - 1]
-        for i in range(args.num_workers)
-    }
+    if shutil.which("tmux") is None:
+        print("Error: tmux is required but was not found in PATH")
+        return 1
 
-    dict_tmux_id_to_list_commands = {i: [] for i in range(args.num_workers)}
+    try:
+        raw_commands = args.commands_file.read_text().splitlines()
+    except FileNotFoundError:
+        print(f"Error: command file '{args.commands_file}' not found")
+        return 1
 
-    for process_id, cmd in enumerate(list_commands):
-        tmux_id = process_id % args.num_workers
-        cpu_list = workerid_to_range_cpu[tmux_id]
+    commands = [line.strip() for line in raw_commands if line.strip()]
+    if not commands:
+        print(f"Error: command file '{args.commands_file}' is empty")
+        return 1
 
-        cmd = cmd.strip()
-        if not cmd:
+    try:
+        args.gpus = [int(x) for x in args.gpus.split(',') if x.strip()]
+    except ValueError:
+        print("Error: --gpus must be a comma-separated list of integer GPU IDs")
+        return 1
+
+    if not args.gpus:
+        print("Error: --gpus did not include any GPU IDs")
+        return 1
+
+    cpu_count = max(1, os.cpu_count() or 1)
+    if args.cpu_per_worker:
+        cpu_per_worker = max(1, args.cpu_per_worker)
+    else:
+        cpu_per_worker = max(1, cpu_count // args.workers)
+
+    worker_cpu_ranges = {}
+    cpu_cursor = 0
+    for worker_id in range(args.workers):
+        start = cpu_cursor
+        end = min(cpu_count - 1, start + cpu_per_worker - 1)
+        worker_cpu_ranges[worker_id] = (start, end)
+        cpu_cursor = end + 1
+        if cpu_cursor >= cpu_count:
+            cpu_cursor = 0
+
+    worker_commands = {i: [] for i in range(args.workers)}
+
+    for process_id, cmd in enumerate(commands):
+        worker_id = process_id % args.workers
+        cpu_start, cpu_end = worker_cpu_ranges[worker_id]
+
+        gpu = args.gpus[worker_id % len(args.gpus)]
+        full_cmd = (
+            f'CUDA_VISIBLE_DEVICES={gpu} '
+            f'taskset --cpu-list {cpu_start}-{cpu_end} '
+            f'{cmd}'
+        )
+        worker_commands[worker_id].append(full_cmd)
+
+    total = sum(len(cmds) for cmds in worker_commands.values())
+    print(
+        f"Preparing {total} commands across {args.workers} worker(s). "
+        f"CPUs: {cpu_count} available, {cpu_per_worker} per worker. "
+        f"GPUs: {args.gpus}"
+    )
+    if args.dry_run:
+        print("Dry run enabled; tmux sessions will not be created.")
+
+    for worker_id, worker_cmds in worker_commands.items():
+        if not worker_cmds:
             continue
 
-        gpu = args.gpus[tmux_id % len(args.gpus)]
-        cmd = f'CUDA_VISIBLE_DEVICES={gpu} taskset --cpu-list {cpu_list[0]}-{cpu_list[1]} {cmd}'
-        dict_tmux_id_to_list_commands[tmux_id].append(cmd)
-
-    print("Summary:", "GPUs:", args.gpus, "Num workers:", args.num_workers, "Num cmds:", len(list_commands))
-
-    for tmux_id, commands in dict_tmux_id_to_list_commands.items():
-        if not commands:
-            continue
-
-        cmd_file = f'/tmp/listcmd_{tmux_id}.txt'
+        cmd_file = Path(f"/tmp/lsh_{args.session_name}_{worker_id}.sh")
         with open(cmd_file, 'w') as f:
-            f.write('\n'.join(commands))
+            f.write('\n'.join(worker_cmds))
 
-        if tmux_id == 0:
-            tmuxcmd = f"tmux new -s {args.name} -d 'sh {cmd_file}'"
+        tmux_cmd: str
+        if worker_id == 0:
+            tmux_cmd = f"tmux new -s {args.session_name} -d 'sh {cmd_file}'"
         else:
-            tmuxcmd = f"tmux new-window -t {args.name} -n 'window-{tmux_id}' 'sh {cmd_file}'"
+            tmux_cmd = (
+                f"tmux new-window -t {args.session_name} "
+                f"-n 'worker-{worker_id}' 'sh {cmd_file}'"
+            )
 
-        print('Running:', tmuxcmd)
+        print('Running:', tmux_cmd)
         if not args.dry_run:
-            os.system(tmuxcmd)
+            os.system(tmux_cmd)
 
     return 0
 

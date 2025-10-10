@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import importlib
-import io
 import shutil
 import sys
-from contextlib import redirect_stderr, redirect_stdout
-from typing import Callable
 
 from rich.console import Console
 from rich.panel import Panel
@@ -16,6 +12,12 @@ from rich.table import Table
 from . import __version__
 from .core.registry import Registry, Tool
 from .core.session import SessionLogger
+from .core.executor import (
+    ToolNotFoundError,
+    ToolPassthroughError,
+    execute_tool_capture,
+    run_module_main,
+)
 
 console = Console()
 _NO_COLOR = False
@@ -29,29 +31,6 @@ def set_global_flags(no_color: bool = False, json_output: bool = False) -> None:
     _JSON_OUTPUT = json_output
     if no_color:
         console = Console(no_color=True, force_terminal=False)
-
-
-def _run_module_main(
-    main_func: Callable[[], int], prog: str, args: list[str], capture: bool
-) -> tuple[int, str, str]:
-    orig_argv = sys.argv[:]
-    sys.argv = [prog] + args
-    stdout_buf: io.StringIO = io.StringIO()
-    stderr_buf: io.StringIO = io.StringIO()
-    try:
-        if capture:
-            with redirect_stdout(stdout_buf), redirect_stderr(stderr_buf):
-                code = int(main_func())
-        else:
-            code = int(main_func())
-    except SystemExit as e:
-        code = int(e.code) if isinstance(e.code, int) else 1
-    except Exception as e:  # noqa: BLE001
-        stderr_buf.write(f"Unhandled error: {e}\n")
-        code = 1
-    finally:
-        sys.argv = orig_argv
-    return code, stdout_buf.getvalue(), stderr_buf.getvalue()
 
 
 def _typer_app_wrapper(app, prog: str, args: list[str]) -> int:
@@ -157,19 +136,19 @@ def build_registry() -> Registry:
     reg = Registry()
 
     # lsh
-    from . import lsh as _lsh
+    # from . import lsh as _lsh
 
-    reg.add(
-        Tool(
-            name="lsh",
-            summary="Execute commands in parallel with tmux and CPU/GPU assignment",
-            runner=lambda a: _run_module_main(_lsh.main, "lsh", a, capture=False)[0],
-            usage="lsh <commands.txt> <num_workers> [--name NAME] [--gpus 0,1] [--dry-run]",
-            tags=["system", "tmux", "parallel"],
-            safety="interactive",
-            passthrough=True,
-        )
-    )
+    # reg.add(
+    #     Tool(
+    #         name="lsh",
+    #         summary="List Shell runs command files in parallel inside tmux with CPU/GPU pinning",
+    #         runner=lambda a: run_module_main(_lsh.main, "lsh", a, capture=False)[0],
+    #         usage="lsh COMMANDS_FILE WORKERS [--session-name NAME] [--gpus 0,1] [--cpu-per-worker N] [--dry-run]",
+    #         tags=["system", "tmux", "parallel"],
+    #         safety="interactive",
+    #         passthrough=True,
+    #     )
+    # )
 
     # hf-down
     from . import hf_down as _hf
@@ -178,7 +157,7 @@ def build_registry() -> Registry:
         Tool(
             name="hf-down",
             summary="Download files from Hugging Face (url transform included)",
-            runner=lambda a: _run_module_main(_hf.main, "hf-down", a, capture=True)[0],
+            runner=lambda a: run_module_main(_hf.main, "hf-down", a, capture=True)[0],
             usage="hf-down <URL> [SAVE_NAME]",
             tags=["network", "download"],
             safety="write",
@@ -192,10 +171,10 @@ def build_registry() -> Registry:
         Tool(
             name="cat-projects",
             summary="Create code snapshots for LLMs",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _cat.main, "cat-projects", a, capture=True
             )[0],
-            usage="cat-projects <paths...> [-e .py,.js] [--summarise]",
+            usage="cat-projects <paths...> [--extensions .py,.js] [--summarize]",
             tags=["dev", "snapshot"],
             safety="safe",
         )
@@ -208,7 +187,7 @@ def build_registry() -> Registry:
         Tool(
             name="print-ipv4",
             summary="Display public IPv4 address",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _ipv4.main, "print-ipv4", a, capture=True
             )[0],
             usage="print-ipv4",
@@ -224,7 +203,7 @@ def build_registry() -> Registry:
         Tool(
             name="organize-downloads",
             summary="Organize Downloads by creation date (moves files)",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _org.main, "organize-downloads", a, capture=True
             )[0],
             usage="organize-downloads [~/Downloads]",
@@ -240,7 +219,7 @@ def build_registry() -> Registry:
         Tool(
             name="kill-process-grep",
             summary="Interactive process killer with fzf",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _kpg.main, "kill-process-grep", a, capture=False
             )[0],
             usage="kill-process-grep",
@@ -278,17 +257,39 @@ def build_registry() -> Registry:
         )
     )
 
-    # set-env
-    from . import set_env as _env
+    # env-* commands (modern interface)
+    from . import env_commands as _env_new
 
     reg.add(
         Tool(
-            name="set-env",
-            summary="Manage KEY=VALUE entries in ~/.env",
-            runner=lambda a: _run_module_main(_env.main, "set-env", a, capture=True)[0],
-            usage="set-env {set KEY VALUE | unset KEY | list}",
+            name="env-set",
+            summary="Set a KEY=VALUE entry in ~/.env",
+            runner=lambda a: run_module_main(_env_new.main_set, "env-set", a, capture=True)[0],
+            usage="env-set KEY VALUE",
             tags=["config", "env"],
             safety="write",
+        )
+    )
+
+    reg.add(
+        Tool(
+            name="env-unset",
+            summary="Remove a KEY from ~/.env",
+            runner=lambda a: run_module_main(_env_new.main_unset, "env-unset", a, capture=True)[0],
+            usage="env-unset KEY",
+            tags=["config", "env"],
+            safety="write",
+        )
+    )
+
+    reg.add(
+        Tool(
+            name="env-list",
+            summary="List all variables in ~/.env",
+            runner=lambda a: run_module_main(_env_new.main_list, "env-list", a, capture=True)[0],
+            usage="env-list",
+            tags=["config", "env"],
+            safety="safe",
         )
     )
 
@@ -299,7 +300,7 @@ def build_registry() -> Registry:
         Tool(
             name="pyinit",
             summary="Initialize a Python project with VSCode settings",
-            runner=lambda a: _run_module_main(_utils.pyinit, "pyinit", a, capture=True)[
+            runner=lambda a: run_module_main(_utils.pyinit, "pyinit", a, capture=True)[
                 0
             ],
             usage="pyinit <name> [--venv]",
@@ -312,7 +313,7 @@ def build_registry() -> Registry:
         Tool(
             name="keep-ssh",
             summary="Keep SSH connections alive",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _utils.keep_ssh, "keep-ssh", a, capture=False
             )[0],
             usage="keep-ssh user@host [--interval 60] [--verbose]",
@@ -326,7 +327,7 @@ def build_registry() -> Registry:
         Tool(
             name="atv-select",
             summary="Select and activate a venv from history (fzf)",
-            runner=lambda a: _run_module_main(
+            runner=lambda a: run_module_main(
                 _utils.atv_select, "atv-select", a, capture=False
             )[0],
             usage="atv-select [--help-venv]",
@@ -385,58 +386,43 @@ def run_tool(reg: Registry, logger: SessionLogger, name: str, args: list[str]) -
         logger.log("result", tool=name, rc=code)
         return code
 
-    # For non-passthrough tools, capture output
-    # Rebuild the execution to capture stdout/stderr
-    module_map = {
-        "hf-down": (importlib.import_module("pytools.hf_down").main, "hf-down"),
-        "cat-projects": (
-            importlib.import_module("pytools.cat_projects").main,
-            "cat-projects",
-        ),
-        "print-ipv4": (
-            importlib.import_module("pytools.print_ipv4").main,
-            "print-ipv4",
-        ),
-        "organize-downloads": (
-            importlib.import_module("pytools.organize_downloads").main,
-            "organize-downloads",
-        ),
-        "pyinit": (importlib.import_module("pytools.cli_utils").pyinit, "pyinit"),
-        "set-env": (importlib.import_module("pytools.set_env").main, "set-env"),
-    }
-
     try:
-        if name in module_map:
-            main_func, prog = module_map[name]
-            rc, out, err = _run_module_main(main_func, prog, args, capture=True)
-            if out and not _JSON_OUTPUT:
-                console.print(
-                    Panel.fit(out, title=f"{name} output", border_style="green")
-                )
-            elif out:
-                print(out, end="")
-            if err:
-                if not _NO_COLOR:
-                    err_console = Console(stderr=True, no_color=_NO_COLOR)
-                    err_console.print(
-                        Panel.fit(err, title=f"{name} stderr", border_style="yellow")
-                    )
-                else:
-                    sys.stderr.write(err)
-            logger.log(
-                "result", tool=name, rc=rc, stdout_len=len(out), stderr_len=len(err)
-            )
-            return rc
-
-        # For Typer apps and others, just run through runner
-        code = tool.runner(args)
-        logger.log("result", tool=name, rc=code)
-        return code
+        result = execute_tool_capture(reg, name, args)
+    except ToolPassthroughError:
+        console.print(
+            f"[red]Tool '{name}' requires an interactive terminal and cannot be captured.[/red]"
+        )
+        logger.log("error", tool=name, error="passthrough_tool")
+        return 1
+    except ToolNotFoundError:
+        console.print(f"[red]Unknown tool:[/red] {name}")
+        logger.log("error", tool=name, error="unknown_tool")
+        return 1
     except Exception as e:
         err_console = Console(stderr=True, no_color=_NO_COLOR)
         err_console.print(f"[red]Failed to run {name}:[/red] {e}")
         logger.log("error", tool=name, error=str(e))
         return 1
+
+    out = result.stdout
+    err = result.stderr
+    rc = result.return_code
+
+    if out:
+        if _JSON_OUTPUT:
+            print(out, end="")
+        else:
+            console.print(Panel.fit(out, title=f"{name} output", border_style="green"))
+
+    if err:
+        if not _NO_COLOR:
+            err_console = Console(stderr=True, no_color=_NO_COLOR)
+            err_console.print(Panel.fit(err, title=f"{name} stderr", border_style="yellow"))
+        else:
+            sys.stderr.write(err)
+
+    logger.log("result", tool=name, rc=rc, stdout_len=len(out), stderr_len=len(err))
+    return rc
 
 
 def interactive_loop(reg: Registry, logger: SessionLogger) -> int:

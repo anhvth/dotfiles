@@ -24,3 +24,4 @@ zsh/plugins/zsh-autosuggestions/
 zsh/plugins/zsh-syntax-highlighting/
 
 node_modules
+pylance_errors.json

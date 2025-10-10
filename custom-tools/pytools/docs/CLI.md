@@ -5,15 +5,15 @@ This document provides a complete reference for all PyTools commands.
 Generated from the tool registry.
 
 
-**Total Tools:** 12
+**Total Tools:** 14
 
 
 ## Tools by Category
 
-- **config**: set-env, setup-typing
+- **config**: env-set, env-unset, env-list, setup-typing
 - **dev**: cat-projects, pyinit, report-error, setup-typing
 - **download**: hf-down
-- **env**: set-env
+- **env**: env-set, env-unset, env-list
 - **fs**: organize-downloads
 - **fzf**: atv-select, kill-process-grep
 - **network**: hf-down, keep-ssh, print-ipv4
@@ -62,7 +62,7 @@ pytools run atv-select
 
 **Usage:**
 ```bash
-cat-projects <paths...> [-e .py,.js] [--summarise]
+cat-projects <paths...> [--extensions .py,.js] [--summarize]
 ```
 
 
@@ -75,10 +75,10 @@ cat-projects <paths...> [-e .py,.js] [--summarise]
 **Examples:**
 ```bash
 # Snapshot Python project
-pytools run cat-projects src/ -e .py
+pytools run cat-projects src/ --extensions .py
 
 # With AI summarization
-pytools run cat-projects . --summarise
+pytools run cat-projects . --summarize
 ```
 
 
@@ -169,12 +169,12 @@ pytools run kill-process-grep
 
 ### `lsh`
 
-**Summary:** Execute commands in parallel with tmux and CPU/GPU assignment
+**Summary:** List Shell (lsh) runs command lists in parallel inside tmux with CPU/GPU pinning
 
 
 **Usage:**
 ```bash
-lsh <commands.txt> <num_workers> [--name NAME] [--gpus 0,1] [--dry-run]
+lsh COMMANDS_FILE WORKERS [--session-name NAME] [--gpus 0,1] [--cpu-per-worker N] [--dry-run]
 ```
 
 
@@ -190,8 +190,11 @@ lsh <commands.txt> <num_workers> [--name NAME] [--gpus 0,1] [--dry-run]
 echo 'python train.py --seed 1' > cmds.txt
 echo 'python train.py --seed 2' >> cmds.txt
 
-# Run in parallel
-pytools run lsh cmds.txt 2 --gpus 0,1
+# Run in parallel with explicit session name
+pytools run lsh cmds.txt 2 --session-name training --gpus 0,1
+
+# Preview tmux command layout without launching
+pytools run lsh cmds.txt 2 --dry-run
 ```
 
 
@@ -313,14 +316,14 @@ pytools run report-error src/main.py --output-file errors.json
 ---
 
 
-### `set-env`
+### `env-set`
 
-**Summary:** Manage KEY=VALUE entries in ~/.env
+**Summary:** Set a KEY=VALUE entry in ~/.env
 
 
 **Usage:**
 ```bash
-set-env {set KEY VALUE | unset KEY | list}
+env-set KEY VALUE
 ```
 
 
@@ -332,14 +335,59 @@ set-env {set KEY VALUE | unset KEY | list}
 
 **Examples:**
 ```bash
-# Set variable
-pytools run set-env set API_KEY mykey
+pytools run env-set API_TOKEN secret
+```
 
-# List all
-pytools run set-env list
 
-# Remove
-pytools run set-env unset API_KEY
+---
+
+
+### `env-unset`
+
+**Summary:** Remove a KEY from ~/.env
+
+
+**Usage:**
+```bash
+env-unset KEY
+```
+
+
+**Safety:** `write`
+
+
+**Tags:** config, env
+
+
+**Examples:**
+```bash
+pytools run env-unset API_TOKEN
+```
+
+
+---
+
+
+### `env-list`
+
+**Summary:** List all variables stored in ~/.env
+
+
+**Usage:**
+```bash
+env-list
+```
+
+
+**Safety:** `safe`
+
+
+**Tags:** config, env
+
+
+**Examples:**
+```bash
+pytools run env-list
 ```
 
 

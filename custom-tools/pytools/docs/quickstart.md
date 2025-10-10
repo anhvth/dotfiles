@@ -60,7 +60,7 @@ pytools --json list       # JSON output for scripting
 **cat-projects** - Create code snapshots for LLMs
 
 ```bash
-pytools run cat-projects src/ -e .py,.js --summarise
+pytools run cat-projects src/ --extensions .py,.js --summarize
 ```
 
 **pyinit** - Initialize a Python project with VSCode settings
@@ -105,15 +105,18 @@ pytools run organize-downloads --pattern "*.pdf"
 pytools run kill-process-grep
 ```
 
-**lsh** - Execute commands in parallel with tmux
+**lsh** - List Shell runs command files in parallel inside tmux with CPU/GPU pinning
 
 ```bash
 # Create a commands file
 echo "python train.py --config config1.yaml" > commands.txt
 echo "python train.py --config config2.yaml" >> commands.txt
 
-# Run in parallel
-pytools run lsh commands.txt 2 --gpus 0,1
+# Run in parallel with explicit session name
+pytools run lsh commands.txt 2 --session-name training --gpus 0,1
+
+# Preview without launching tmux
+pytools run lsh commands.txt 2 --dry-run
 ```
 
 ### Network Tools
@@ -138,12 +141,12 @@ pytools run keep-ssh user@server --interval 30
 
 ### Configuration Tools
 
-**set-env** - Manage environment variables in ~/.env
+**env-set / env-unset / env-list** - Manage environment variables in ~/.env
 
 ```bash
-pytools run set-env set API_KEY mykey123
-pytools run set-env list
-pytools run set-env unset API_KEY
+pytools run env-set API_KEY mykey123
+pytools run env-list
+pytools run env-unset API_KEY
 ```
 
 **atv-select** - Select and activate virtual environments

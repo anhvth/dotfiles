@@ -14,6 +14,7 @@ pytools              # Interactive mode
 pytools list         # Show all tools
 pytools doctor       # Check dependencies
 pytools run <tool>   # Run a specific tool
+pytools-mcp          # Launch MCP server over stdio
 ```
 
 📚 **[Read the Quickstart Guide](docs/quickstart.md)** for a complete walkthrough!
@@ -23,9 +24,10 @@ pytools run <tool>   # Run a specific tool
 ✨ **Enhanced Safety**: Dry-run and confirmation prompts for destructive operations  
 🔧 **Dependency Doctor**: Check system dependencies with remediation guidance  
 ⚙️ **Configuration System**: Centralized config in `~/.config/pytools/`  
-🎯 **More Tools**: Added `report-error`, `setup-typing`, and `set-env`  
+🎯 **More Tools**: Added `report-error`, `setup-typing`, and the `env-*` suite  
 📊 **Better organize-downloads**: Preview, filters, and flexible sorting options  
-🧪 **Test Suite**: 14 passing tests covering core functionality  
+🧪 **Test Suite**: 18 passing tests covering core functionality  
+🧩 **MCP Server**: `pytools-mcp` exposes safe tools via the Model Context Protocol  
 📖 **Complete Docs**: Quickstart guide and auto-generated CLI reference
 
 ## Installation
@@ -81,9 +83,26 @@ pytools run print-ipv4          # Get your public IP
 pytools run cat-projects ./src  # Create code snapshot
 ```
 
+### MCP Server
+
+PyTools ships with an experimental [Model Context Protocol](https://modelcontextprotocol.io) server that makes a subset of safe tools available to MCP-compatible assistants (such as Claude Desktop).
+
+```bash
+pytools-mcp                 # Start the server (stdio transport)
+pytools-mcp --session-id mcp-demo  # Custom session log identifier
+```
+
+The server:
+
+- Lists only non-destructive, non-interactive tools
+- Captures command stdout/stderr and returns them to the client
+- Logs invocations to the standard PyTools session log directory
+
+Configure your MCP client to launch `pytools-mcp` and it will negotiate the protocol automatically.
+
 ## Available Tools
 
-PyTools includes 13 utilities organized by category:
+PyTools includes 14 utilities organized by category:
 
 ### Development Tools
 
@@ -94,7 +113,7 @@ PyTools includes 13 utilities organized by category:
 
 ### System Utilities
 
-- **lsh** - Execute commands in parallel using tmux with CPU/GPU assignment
+- **lsh** - List Shell runs command files in parallel inside tmux with CPU/GPU pinning
 - **kill-process-grep** - Interactive process killer using fzf
 - **organize-downloads** - Organize downloads folder by date (with dry-run, filters, preview)
 
@@ -106,7 +125,9 @@ PyTools includes 13 utilities organized by category:
 
 ### Configuration Tools
 
-- **set-env** - Manage KEY=VALUE entries in ~/.env
+- **env-set** - Write KEY=VALUE entries to ~/.env
+- **env-unset** - Remove a KEY from ~/.env
+- **env-list** - Show current ~/.env entries
 - **atv-select** - Select and activate virtualenv from history
 
 ## Examples
@@ -128,11 +149,12 @@ $ pytools run organize-downloads --pattern "*.pdf"  # Only PDFs
 # Development workflow
 $ pytools run setup-typing --python-version 3.11
 $ pytools run report-error src/main.py --output-file errors.json
-$ pytools run cat-projects ./src -e .py > snapshot.txt
+$ pytools run cat-projects ./src --extensions .py > snapshot.txt
 
 # Configuration management
-$ pytools run set-env set API_KEY mykey123
-$ pytools run set-env list
+$ pytools run env-set API_KEY mykey123
+$ pytools run env-list
+$ pytools run env-unset API_KEY
 ```
 
 ## Global Flags
@@ -145,6 +167,7 @@ $ pytools run set-env list
 
 - **[Quickstart Guide](docs/quickstart.md)** - Complete walkthrough for new users
 - **[CLI Reference](docs/CLI.md)** - Detailed documentation for all tools
+- **[MCP Server Guide](docs/mcp_server.md)** - Launch and test the MCP integration
 - **[Modernization Plan](plans/00_mordernize.md)** - Architecture and roadmap
 
 ## Development
@@ -164,7 +187,7 @@ pytest tests/ --cov=src/pytools --cov-report=term-missing
 
 ### Test Coverage
 
-- **14 tests** covering registry, CLI, and session logging
+- **18 tests** covering registry, CLI, MCP integration, and session logging
 - Tests validate: tool registration, CLI flags, JSON output, session logging
 
 ## Dependencies

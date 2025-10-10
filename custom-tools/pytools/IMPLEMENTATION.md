@@ -12,7 +12,7 @@ Successfully implemented the modernization plan (`plans/00_mordernize.md`) for P
 
 - **report-error**: Pyright/Pylance error reporting to JSON
 - **setup-typing**: Type checking and linting configuration
-- **set-env**: Environment variable management in ~/.env
+- **env-set / env-unset / env-list**: Environment variable management in ~/.env (old `set-env` nuked)
 - All tools now accessible via unified CLI
 
 #### 2. Global CLI Flags
@@ -77,7 +77,7 @@ Successfully implemented the modernization plan (`plans/00_mordernize.md`) for P
   - Configuration guide
   - Troubleshooting section
 - **docs/CLI.md**: Auto-generated tool reference
-  - All 13 tools documented
+  - All 14 tools documented
   - Usage examples for each tool
   - Categorized by tags
   - Generated from registry
@@ -183,7 +183,7 @@ All implementations verified:
 
 ## Metrics
 
-- **Tools**: 13 (up from 10)
+- **Tools**: 14 (up from 10)
 - **Tests**: 14 (comprehensive coverage)
 - **Documentation**: 2 new guides + auto-generated reference
 - **Lines of Code**: ~2000+ (well-structured)
@@ -220,7 +220,7 @@ The implementation follows the modernization plan philosophy:
 Users upgrading from v0.2.0:
 
 1. Run `pytools doctor` to verify setup
-2. New tools available: `report-error`, `setup-typing`, `set-env`
+2. New tools available: `report-error`, `setup-typing`, `env-set`, `env-unset`, `env-list`
 3. Enhanced `organize-downloads` with new flags
 4. Config now in `~/.config/pytools/` (auto-migrated)
 5. All existing tools work the same way

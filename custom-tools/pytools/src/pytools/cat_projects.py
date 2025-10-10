@@ -284,23 +284,26 @@ def make_snapshot(
 
 def main():
     """Main entry point for the cat-projects command."""
-    parser = argparse.ArgumentParser(description="Create code snapshot for LLMs.")
+    parser = argparse.ArgumentParser(
+        description="Create code snapshot for LLMs.",
+        epilog="Example: cat-projects src/ --extensions .py,.js --summarize"
+    )
     parser.add_argument("paths", nargs="+", help="Files or directories to scan.")
     parser.add_argument(
-        "-e", "--exts",
+        "-e", "--extensions",
         default=",".join(DEFAULT_EXTS),
         help="Comma‑separated list of file extensions (default: .py).",
     )
     parser.add_argument(
-        "-s", "--summarise",
+        "-s", "--summarize",
         action="store_true",
-        help="Summarise Python files."
+        help="Summarize Python files (extract signatures and docstrings)."
     )
     parser.add_argument(
         "-w", "--workers",
         type=int,
         default=8,
-        help="Thread workers (default: 8).",
+        help="Number of thread workers (default: 8).",
     )
     parser.add_argument(
         "-i", "--ignore",
@@ -311,7 +314,7 @@ def main():
     args = parser.parse_args()
 
     paths = [Path(p) for p in args.paths]
-    exts = [e if e.startswith(".") else f".{e}" for e in args.exts.split(",") if e]
+    exts = [e if e.startswith(".") else f".{e}" for e in args.extensions.split(",") if e]
 
     extra_ignores = tuple(p.strip() for p in args.ignore.split(",") if p.strip())
     ignore_patterns = DEFAULT_IGNORES + extra_ignores
@@ -319,7 +322,7 @@ def main():
     snapshot = make_snapshot(
         paths,
         exts=exts,
-        summarise=args.summarise,
+        summarise=args.summarize,
         workers=args.workers,
         ignore_patterns=ignore_patterns,
     )

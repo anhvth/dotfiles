@@ -121,8 +121,8 @@ This plan evaluates the current state of PyTools, highlights UX and consistency 
   - Add `--json` to output a file list and counts; clarify ignore semantics; ensure robust summariser fallback.
 - report_error/setup_typing:
   - Register both as tools; align to `main(argv) -> int` shim while keeping Typer CLIs callable directly.
-- set-env:
-  - Register in CLI; add `--file` override for custom env path; consistent stderr on errors and rc semantics.
+- env commands:
+   - Replace legacy `set-env` with explicit `env-set`, `env-unset`, `env-list` commands; consistent stderr on errors and rc semantics.
 
 10) Developer Experience & Quality
 - Adopt `ruff` and `mypy` configs in `pyproject.toml`; keep `setup_typing.py` for bootstrapping but ensure configs live in VCS.
@@ -132,7 +132,7 @@ This plan evaluates the current state of PyTools, highlights UX and consistency 
 ## Milestones
 
 Phase 1 — Foundations (1–2 days)
-- Register missing tools (`report_error`, `setup_typing`, `set_env`).
+- Register missing tools (`report_error`, `setup_typing`, `env_*`).
 - Remove capture hack by standardizing runner behavior.
 - Add `pytools --version`, `--no-color`, `doctor` (basic checks).
 
