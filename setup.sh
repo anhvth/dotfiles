@@ -262,7 +262,7 @@ install_core_packages() {
         brew_install zsh neovim tmux ripgrep fzf the_silver_searcher git curl node
     else
         apt_update
-        add_apt_repository ppa:neovim-ppa/stable
+        #add_apt_repository ppa:neovim-ppa/stable
         apt_update
         apt_install zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential \
                     software-properties-common python3-neovim
@@ -377,6 +377,15 @@ install_fzf() {
 install_oh_my_zsh() {
     log_info "${ICON_DOWNLOAD} Installing oh-my-zsh..."
     
+    # remove existing oh-my-zsh if any
+    exists_and_remove() {
+        local dir="$1"
+        if [[ -d "$dir" ]]; then
+            rm -rf "$dir"
+            log_info "${ICON_CONFIG} Removed existing directory: $dir"
+        fi
+    }
+    exists_and_remove "${HOME}/.oh-my-zsh"
     if [[ -d "${HOME}/.oh-my-zsh" ]]; then
         log_info "${ICON_CHECK} oh-my-zsh already exists. Skipping installation."
     else
@@ -389,6 +398,7 @@ install_oh_my_zsh() {
         # Use official oh-my-zsh installation script
         # Set RUNZSH=no to prevent automatic shell switch at the end
         # We let it create its .zshrc, then replace it with our clean version
+
         if [[ "$AUTO_YES" == true ]]; then
             RUNZSH=no CHSH=no yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
         else
