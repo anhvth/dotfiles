@@ -407,24 +407,6 @@ install_oh_my_zsh() {
         
         log_success "${ICON_GIT} oh-my-zsh installed."
     fi
-    
-    # Backup existing .zshrc if it exists
-    if [[ -f "${HOME}/.zshrc" ]]; then
-        local backup_file="${HOME}/.zshrc.backup"
-        cp "${HOME}/.zshrc" "$backup_file"
-        log_info "${ICON_CONFIG} Backed up existing .zshrc to .zshrc.backup"
-    fi
-    
-    # Always create a clean, minimal ~/.zshrc
-    # Replace the noisy oh-my-zsh generated file (100+ lines) with our minimal version
-    log_info "${ICON_CONFIG} Creating clean ~/.zshrc..."
-    cat > "${HOME}/.zshrc" << 'EOF'
-export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="robbyrussell"
-source ~/dotfiles/zsh/zshrc_manager.sh
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-EOF
-    log_success "${ICON_CONFIG} Created minimal ~/.zshrc (replaced verbose oh-my-zsh version)"
 }
 
 install_zsh_plugins() {
@@ -636,6 +618,26 @@ change_default_shell() {
     log_success "${ICON_SHELL} Default shell changed to zsh."
 }
 
+create_minimal_zshrc() {
+    # Backup existing .zshrc if it exists
+    if [[ -f "${HOME}/.zshrc" ]]; then
+        local backup_file="${HOME}/.zshrc.backup"
+        cp "${HOME}/.zshrc" "$backup_file"
+        log_info "${ICON_CONFIG} Backed up existing .zshrc to .zshrc.backup"
+    fi
+    
+    # Always create a clean, minimal ~/.zshrc
+    # Replace the noisy oh-my-zsh generated file (100+ lines) with our minimal version
+    log_info "${ICON_CONFIG} Creating clean ~/.zshrc..."
+    cat > "${HOME}/.zshrc" << 'EOF'
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+source ~/dotfiles/zsh/zshrc_manager.sh
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+EOF
+    log_success "${ICON_CONFIG} Created minimal ~/.zshrc (replaced verbose oh-my-zsh version)"
+}
+
 #============================================================================
 # Main Setup Function
 #============================================================================
@@ -749,6 +751,9 @@ main() {
     
     # Step 11: Change default shell
     change_default_shell
+    
+    # Ensure minimal .zshrc is created
+    create_minimal_zshrc
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
