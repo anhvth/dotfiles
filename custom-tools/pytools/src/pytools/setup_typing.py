@@ -27,8 +27,8 @@ def setup_typing(
     settings["python.analysis.diagnosticSeverityOverrides"] = {
         "reportUnusedImport": "none"
     }
-    settings["ruff.lint.run"] = "onSave"
-    settings["ruff.lint.args"] = ["--config=pyproject.toml"]
+    # settings["ruff.lint.run"] = "onSave"
+    # settings["ruff.lint.args"] = ["--config=pyproject.toml"]
     settings["python.analysis.indexing"] = False
     settings["python.analysis.completeFunctionParens"] = False
     settings["python.analysis.inMemoryPackageIndex"] = False

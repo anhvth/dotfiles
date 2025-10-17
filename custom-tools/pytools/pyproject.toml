@@ -30,17 +30,20 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [tool.ruff]
+select = ["E", "F", "ANN"]
+ignore = ["ANN101", "ANN102"]
 line-length = 88
-target-version = "py38"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+exclude = ["venv", "tests"]
 namespace_packages = true
 explicit_package_bases = true
-exclude = ["venv", "tests", "htmlcov"]
