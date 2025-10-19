@@ -13,6 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="${DOTFILES_DIR:-${HOME}/dotfiles}"
 AUTO_YES=false
+FORCE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -21,9 +22,14 @@ while [[ $# -gt 0 ]]; do
             AUTO_YES=true
             shift
             ;;
+        -f|--force)
+            FORCE=true
+            shift
+            ;;
         -h|--help)
-            echo "Usage: $0 [-y|--yes] [-h|--help]"
+            echo "Usage: $0 [-y|--yes] [-f|--force] [-h|--help]"
             echo "  -y, --yes    Non-interactive mode (auto-confirm all prompts)"
+            echo "  -f, --force  Force reinstall/overwrite of managed artifacts"
             echo "  -h, --help   Show this help message"
             exit 0
             ;;
@@ -95,13 +101,14 @@ check_node_version() {
     local current_major=$(node -v 2>/dev/null | sed 's/v//' | cut -d. -f1)
 
     if [[ -z "$current_major" ]]; then
-        log_error "❌ Node.js is not installed. Please install Node.js ${required_major}+."
-        exit 1
+        log_error "${ICON_ERROR} Node.js is not installed. Please install Node.js ${required_major}+."
+        return 1
     elif (( current_major < required_major )); then
-        log_error "❌ Node.js version $current_major is too old. Please upgrade to v${required_major}+."
-        exit 1
+        log_error "${ICON_ERROR} Node.js version $current_major is too old. Please upgrade to v${required_major}+."
+        return 1
     else
-        log_success "✅ Node.js version $(node -v) detected."
+        log_success "${ICON_SUCCESS} Node.js version $(node -v) detected."
+        return 0
     fi
 }
 
@@ -197,6 +204,14 @@ brew_install() {
     local packages=("$@")
     log_info "${ICON_PACKAGE} Installing via Homebrew: ${packages[*]}"
     brew install "${packages[@]}"
+    
+    # In force mode, ensure packages are linked
+    if [[ "$FORCE" == true ]]; then
+        for pkg in "${packages[@]}"; do
+            brew link --overwrite "$pkg" 2>/dev/null || true
+        done
+    fi
+    
     log_success "${ICON_PACKAGE} Installed: ${packages[*]}"
 }
 
@@ -219,12 +234,15 @@ link_config() {
     mkdir -p "$target_dir"
     
     # Check if already configured
-    if [[ -f "$target_file" ]] && grep -qF "$source_line" "$target_file"; then
+    if [[ -f "$target_file" ]] && grep -qF "$source_line" "$target_file" && [[ "$FORCE" == false ]]; then
         log_info "${ICON_CHECK} Already configured: $target_file"
         return 0
     fi
     
     # Write configuration
+    if [[ -f "$target_file" ]] && [[ "$FORCE" == true ]]; then
+        log_info "${ICON_CONFIG} Overwriting existing config (force): $target_file"
+    fi
     echo "$source_line" > "$target_file"
     log_success "${ICON_CONFIG} Configured: $target_file"
 }
@@ -237,8 +255,12 @@ copy_file() {
     mkdir -p "$dest_dir"
     
     if [[ -f "$src" ]]; then
-        cp "$src" "$dest"
-        log_success "${ICON_CONFIG} Copied: $src → $dest"
+        if cp "$src" "$dest" 2>/dev/null; then
+            log_success "${ICON_CONFIG} Copied: $src → $dest"
+        else
+            # cp returns 1 if files are identical, which is fine
+            log_info "${ICON_CHECK} Already up to date: $dest"
+        fi
     else
         log_warning "${ICON_WARN} Source not found: $src"
     fi
@@ -292,23 +314,22 @@ install_npm_globals() {
         fi
     fi
 
-    check_node_version
+    if ! check_node_version; then
+        log_warning "${ICON_WARN} Skipping npm packages installation due to Node.js issues."
+        return 1
+    fi
 
     # Install openai/codex globally
-    if npm list -g openai/codex >/dev/null 2>&1; then
+    if npm list -g openai/codex >/dev/null 2>&1 && [[ "$FORCE" == false ]]; then
         log_info "${ICON_CHECK} npm package openai/codex already installed globally."
     else
-        if npm install -g openai/codex; then
+        if [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Reinstalling npm package openai/codex (force mode)."
+        fi
+        if npm install -g openai/codex 2>/dev/null; then
             log_success "${ICON_PACKAGE} Installed: openai/codex (global)"
-        elif [[ -n "${BOOTSTRAP_SUDO:-}" ]]; then
-            log_warning "${ICON_WARN} npm install requires elevated permissions. Retrying with sudo..."
-            if ${BOOTSTRAP_SUDO} npm install -g openai/codex; then
-                log_success "${ICON_PACKAGE} Installed: openai/codex (global) with sudo"
-            else
-                log_warning "${ICON_WARN} Failed to install openai/codex globally even with sudo."
-            fi
         else
-            log_warning "${ICON_WARN} Failed to install openai/codex globally."
+            log_warning "${ICON_WARN} Failed to install openai/codex globally. You can install it manually later with: npm install -g openai/codex"
         fi
     fi
 }
@@ -317,16 +338,24 @@ install_npm_globals() {
 install_uv() {
     log_info "${ICON_DOWNLOAD} Installing uv (Python toolchain manager)..."
 
-    if command_exists uv; then
+    if command_exists uv && [[ "$FORCE" == false ]]; then
         log_success "${ICON_CHECK} uv already installed."
         return 0
+    fi
+
+    if command_exists uv && [[ "$FORCE" == true ]]; then
+        log_info "${ICON_UPDATE} Reinstalling uv (force mode)."
     fi
 
     local os=$(detect_os)
     if [[ "$os" == "macos" ]]; then
         if has_brew; then
             log_info "${ICON_PACKAGE} Installing uv via Homebrew..."
-            brew_install uv
+            if command_exists uv && [[ "$FORCE" == true ]]; then
+                brew reinstall uv
+            else
+                brew_install uv
+            fi
         else
             log_warning "${ICON_WARN} Homebrew not found. Falling back to official install script."
             curl -fsSL https://astral.sh/uv/install.sh | sh
@@ -358,20 +387,32 @@ install_uv() {
 install_fzf() {
     log_info "${ICON_DOWNLOAD} Installing fzf..."
     
+    local needs_install=false
+    
     if [[ -d "${HOME}/.fzf" ]]; then
-        log_info "${ICON_CHECK} fzf already exists. Skipping clone."
+        if [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Removing existing fzf (force mode)."
+            rm -rf "${HOME}/.fzf"
+            needs_install=true
+        else
+            log_info "${ICON_CHECK} fzf already exists. Skipping clone."
+        fi
     else
+        needs_install=true
+    fi
+
+    if [[ "$needs_install" == true ]]; then
         git clone --depth 1 https://github.com/junegunn/fzf.git "${HOME}/.fzf"
         log_success "${ICON_GIT} fzf cloned."
+        
+        # Install fzf
+        if [[ "$AUTO_YES" == true ]]; then
+            yes | "${HOME}/.fzf/install" --all --no-bash --no-fish || true
+        else
+            "${HOME}/.fzf/install" --all --no-bash --no-fish
+        fi
+        log_success "${ICON_DOWNLOAD} fzf installed."
     fi
-    
-    # Install fzf
-    if [[ "$AUTO_YES" == true ]]; then
-        yes | "${HOME}/.fzf/install" --all --no-bash --no-fish
-    else
-        "${HOME}/.fzf/install" --all --no-bash --no-fish
-    fi
-    log_success "${ICON_DOWNLOAD} fzf installed."
 }
 
 install_oh_my_zsh() {
@@ -400,7 +441,7 @@ install_oh_my_zsh() {
         # We let it create its .zshrc, then replace it with our clean version
 
         if [[ "$AUTO_YES" == true ]]; then
-            RUNZSH=no CHSH=no yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+            RUNZSH=no CHSH=no yes | sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended || true
         else
             RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
         fi
@@ -417,9 +458,16 @@ install_zsh_plugins() {
     
     # Install zsh-autosuggestions
     if [[ -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
-        log_info "${ICON_CHECK} zsh-autosuggestions already exists. Updating..."
-        (cd "$custom_plugins_dir/zsh-autosuggestions" && git pull -q)
-    else
+        if [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Removing zsh-autosuggestions for clean install (force)."
+            rm -rf "$custom_plugins_dir/zsh-autosuggestions"
+        else
+            log_info "${ICON_CHECK} zsh-autosuggestions already exists. Updating..."
+            (cd "$custom_plugins_dir/zsh-autosuggestions" && git pull -q)
+        fi
+    fi
+
+    if [[ ! -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
         log_info "${ICON_DOWNLOAD} Cloning zsh-autosuggestions..."
         git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins_dir/zsh-autosuggestions"
         log_success "${ICON_PLUGIN} zsh-autosuggestions installed."
@@ -427,9 +475,16 @@ install_zsh_plugins() {
     
     # Install zsh-syntax-highlighting
     if [[ -d "$custom_plugins_dir/zsh-syntax-highlighting" ]]; then
-        log_info "${ICON_CHECK} zsh-syntax-highlighting already exists. Updating..."
-        (cd "$custom_plugins_dir/zsh-syntax-highlighting" && git pull -q)
-    else
+        if [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Removing zsh-syntax-highlighting for clean install (force)."
+            rm -rf "$custom_plugins_dir/zsh-syntax-highlighting"
+        else
+            log_info "${ICON_CHECK} zsh-syntax-highlighting already exists. Updating..."
+            (cd "$custom_plugins_dir/zsh-syntax-highlighting" && git pull -q)
+        fi
+    fi
+
+    if [[ ! -d "$custom_plugins_dir/zsh-syntax-highlighting" ]]; then
         log_info "${ICON_DOWNLOAD} Cloning zsh-syntax-highlighting..."
         git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting "$custom_plugins_dir/zsh-syntax-highlighting"
         log_success "${ICON_PLUGIN} zsh-syntax-highlighting installed."
@@ -444,9 +499,12 @@ install_vim_plug() {
     local plug_path="${HOME}/.local/share/nvim/site/autoload/plug.vim"
     mkdir -p "$(dirname "$plug_path")"
     
-    if [[ -f "$plug_path" ]]; then
+    if [[ -f "$plug_path" ]] && [[ "$FORCE" == false ]]; then
         log_info "${ICON_CHECK} vim-plug already exists."
     else
+        if [[ -f "$plug_path" ]] && [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Re-downloading vim-plug (force mode)."
+        fi
         curl -fsSLo "$plug_path" --create-dirs \
             https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
         log_success "${ICON_PLUGIN} vim-plug installed."
@@ -488,9 +546,16 @@ install_github_copilot() {
     mkdir -p "$nvim_copilot_dir"
     
     if [[ -d "$nvim_copilot_dir/copilot.vim" ]]; then
-        log_info "${ICON_CHECK} Copilot for Neovim already exists. Updating..."
-        (cd "$nvim_copilot_dir/copilot.vim" && git pull)
-    else
+        if [[ "$FORCE" == true ]]; then
+            log_info "${ICON_UPDATE} Removing existing Copilot plugin for clean install (force)."
+            rm -rf "$nvim_copilot_dir/copilot.vim"
+        else
+            log_info "${ICON_CHECK} Copilot for Neovim already exists. Updating..."
+            (cd "$nvim_copilot_dir/copilot.vim" && git pull)
+        fi
+    fi
+
+    if [[ ! -d "$nvim_copilot_dir/copilot.vim" ]]; then
         git clone https://github.com/github/copilot.vim "$nvim_copilot_dir/copilot.vim"
         log_success "${ICON_PLUGIN} GitHub Copilot for Neovim installed."
     fi
@@ -668,7 +733,16 @@ main() {
     log_success "${ICON_CHECK} Dotfiles directory: $DOTFILES_DIR"
     
     echo ""
-    log_info "${ICON_INFO} Setup mode: $([ "$AUTO_YES" == true ] && echo "Non-interactive (-y)" || echo "Interactive")"
+    local setup_mode
+    if [[ "$AUTO_YES" == true ]]; then
+        setup_mode="Non-interactive (-y)"
+    else
+        setup_mode="Interactive"
+    fi
+    if [[ "$FORCE" == true ]]; then
+        setup_mode+=" + Force (-f)"
+    fi
+    log_info "${ICON_INFO} Setup mode: $setup_mode"
     echo ""
     
     if [[ "$AUTO_YES" == false ]]; then
