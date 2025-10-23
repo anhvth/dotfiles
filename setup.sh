@@ -14,6 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="${DOTFILES_DIR:-${HOME}/dotfiles}"
 AUTO_YES=false
 FORCE=false
+NO_SUDO=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -26,11 +27,16 @@ while [[ $# -gt 0 ]]; do
             FORCE=true
             shift
             ;;
+        --no-sudo)
+            NO_SUDO=true
+            shift
+            ;;
         -h|--help)
-            echo "Usage: $0 [-y|--yes] [-f|--force] [-h|--help]"
-            echo "  -y, --yes    Non-interactive mode (auto-confirm all prompts)"
-            echo "  -f, --force  Force reinstall/overwrite of managed artifacts"
-            echo "  -h, --help   Show this help message"
+            echo "Usage: $0 [-y|--yes] [-f|--force] [--no-sudo] [-h|--help]"
+            echo "  -y, --yes     Non-interactive mode (auto-confirm all prompts)"
+            echo "  -f, --force   Force reinstall/overwrite of managed artifacts"
+            echo "  --no-sudo     Skip operations that require sudo privileges"
+            echo "  -h, --help    Show this help message"
             exit 0
             ;;
         *)
@@ -139,7 +145,10 @@ has_apt() {
 }
 
 detect_sudo() {
-    if [[ "$(id -u)" -eq 0 ]]; then
+    if [[ "$NO_SUDO" == true ]]; then
+        export BOOTSTRAP_SUDO=""
+        log_info "${ICON_INFO} Running in --no-sudo mode. Skipping privileged operations."
+    elif [[ "$(id -u)" -eq 0 ]]; then
         export BOOTSTRAP_SUDO=""
         log_info "${ICON_INFO} Running as root."
     elif command_exists sudo; then
@@ -181,6 +190,10 @@ confirm() {
 #============================================================================
 
 apt_update() {
+    if [[ "$NO_SUDO" == true ]]; then
+        log_info "${ICON_INFO} Skipping apt update (--no-sudo mode)"
+        return 0
+    fi
     log_info "${ICON_UPDATE} Updating package list..."
     ${BOOTSTRAP_SUDO} apt-get update -qq
     log_success "${ICON_UPDATE} Package list updated."
@@ -188,6 +201,11 @@ apt_update() {
 
 apt_install() {
     local packages=("$@")
+    if [[ "$NO_SUDO" == true ]]; then
+        log_warning "${ICON_WARN} Skipping system package installation (--no-sudo mode): ${packages[*]}"
+        log_info "${ICON_INFO} To install manually: sudo apt-get install ${packages[*]}"
+        return 0
+    fi
     log_info "${ICON_PACKAGE} Installing: ${packages[*]}"
     ${BOOTSTRAP_SUDO} apt-get install -y -qq "${packages[@]}"
     log_success "${ICON_PACKAGE} Installed: ${packages[*]}"
@@ -195,6 +213,11 @@ apt_install() {
 
 add_apt_repository() {
     local repo="$1"
+    if [[ "$NO_SUDO" == true ]]; then
+        log_warning "${ICON_WARN} Skipping repository addition (--no-sudo mode): $repo"
+        log_info "${ICON_INFO} To add manually: sudo add-apt-repository -y $repo"
+        return 0
+    fi
     log_info "${ICON_PACKAGE} Adding repository: $repo"
     ${BOOTSTRAP_SUDO} add-apt-repository -y "$repo"
     log_success "${ICON_PACKAGE} Repository added: $repo"
@@ -283,14 +306,28 @@ install_core_packages() {
         brew_update
         brew_install zsh neovim tmux ripgrep fzf the_silver_searcher git curl node
     else
-        apt_update
-        #add_apt_repository ppa:neovim-ppa/stable
-        apt_update
-        apt_install zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential \
-                    software-properties-common python3-neovim
+        if [[ "$NO_SUDO" == true ]]; then
+            log_warning "${ICON_WARN} Skipping system package installation (--no-sudo mode)"
+            echo ""
+            log_info "${ICON_INFO} Manual installation commands for Ubuntu/Debian:"
+            echo "  sudo apt-get update"
+            echo "  sudo apt-get install -y zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential software-properties-common python3-neovim"
+            echo ""
+            log_info "${ICON_INFO} Continuing with user-space installations..."
+        else
+            apt_update
+            #add_apt_repository ppa:neovim-ppa/stable
+            apt_update
+            apt_install zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential \
+                        software-properties-common python3-neovim
+        fi
     fi
     
-    log_success "${ICON_PACKAGE} Core packages installed."
+    if [[ "$NO_SUDO" == true && "$os" != "macos" ]]; then
+        log_info "${ICON_CHECK} Skipped system packages (--no-sudo mode). Continuing with user installations."
+    else
+        log_success "${ICON_PACKAGE} Core packages installed."
+    fi
 }
 
 # Install npm packages needed globally
@@ -649,7 +686,11 @@ change_default_shell() {
     log_info "${ICON_SHELL} Checking default shell..."
     
     if ! command_exists zsh; then
-        log_warning "${ICON_WARN} zsh not found. Cannot set as default shell."
+        if [[ "$NO_SUDO" == true ]]; then
+            log_warning "${ICON_WARN} zsh not found and cannot install (--no-sudo mode). Install manually: sudo apt-get install zsh"
+        else
+            log_warning "${ICON_WARN} zsh not found. Cannot set as default shell."
+        fi
         return 1
     fi
     
@@ -663,6 +704,13 @@ change_default_shell() {
     
     if [[ "$current_shell" == "$zsh_path" ]]; then
         log_success "${ICON_SHELL} Default shell is already zsh."
+        return 0
+    fi
+    
+    if [[ "$NO_SUDO" == true ]]; then
+        log_warning "${ICON_WARN} Cannot change default shell in --no-sudo mode."
+        log_info "${ICON_INFO} To change manually: sudo chsh -s $(which zsh) $current_user"
+        log_info "${ICON_INFO} Or add 'exec zsh' to your current shell's rc file."
         return 0
     fi
     
@@ -741,6 +789,9 @@ main() {
     fi
     if [[ "$FORCE" == true ]]; then
         setup_mode+=" + Force (-f)"
+    fi
+    if [[ "$NO_SUDO" == true ]]; then
+        setup_mode+=" + No-Sudo (--no-sudo)"
     fi
     log_info "${ICON_INFO} Setup mode: $setup_mode"
     echo ""
