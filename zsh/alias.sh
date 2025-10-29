@@ -70,3 +70,10 @@ pytools() {
         install-pytools && command pytools "$@"
     fi
 }
+
+alias ju-colab="python -m jupyter notebook \
+  --NotebookApp.allow_origin='https://colab.research.google.com' \
+  --NotebookApp.port=8888 \
+  --NotebookApp.token='' \
+  --NotebookApp.disable_check_xsrf=True \
+  --allow-root"
