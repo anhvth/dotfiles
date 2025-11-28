@@ -33,10 +33,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             echo "Usage: $0 [-y|--yes] [-f|--force] [--no-sudo] [-h|--help]"
-            echo "  -y, --yes     Non-interactive mode (auto-confirm all prompts)"
-            echo "  -f, --force   Force reinstall/overwrite of managed artifacts"
-            echo "  --no-sudo     Skip operations that require sudo privileges"
-            echo "  -h, --help    Show this help message"
+            echo "  -y, --yes      Non-interactive mode (auto-confirm all prompts)"
+            echo "  -f, --force    Force reinstall/overwrite of managed artifacts"
+            echo "  --no-sudo      Skip operations that require sudo privileges"
+            echo "  -h, --help     Show this help message"
             exit 0
             ;;
         *)
@@ -306,20 +306,43 @@ install_core_packages() {
         brew_update
         brew_install zsh neovim tmux ripgrep fzf the_silver_searcher git curl node
     else
+        # Linux / Ubuntu Flow
         if [[ "$NO_SUDO" == true ]]; then
             log_warning "${ICON_WARN} Skipping system package installation (--no-sudo mode)"
             echo ""
             log_info "${ICON_INFO} Manual installation commands for Ubuntu/Debian:"
             echo "  sudo apt-get update"
             echo "  sudo apt-get install -y zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential software-properties-common python3-neovim"
+            echo "  # Manual Node.js setup needed for v22+"
+            echo "  curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh"
+            echo "  sudo bash nodesource_setup.sh && sudo apt-get install -y nodejs"
             echo ""
             log_info "${ICON_INFO} Continuing with user-space installations..."
         else
-            apt_update
-            #add_apt_repository ppa:neovim-ppa/stable
+            # 1. Update and install prerequisites (curl is needed for NodeSource)
             apt_update
             apt_install zsh neovim tmux ripgrep fzf silversearcher-ag git curl build-essential \
                         software-properties-common python3-neovim
+
+            # 2. Fix for Node.js v22 (replaces default v18 repo)
+            log_info "${ICON_SETUP} Setting up Node.js v22+ repository..."
+            
+            # Download the setup script
+            if curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh; then
+                # Run the setup script
+                log_info "${ICON_PACKAGE} Running NodeSource setup..."
+                ${BOOTSTRAP_SUDO} bash nodesource_setup.sh
+                
+                # Install Node.js
+                log_info "${ICON_PACKAGE} Installing Node.js v22+..."
+                ${BOOTSTRAP_SUDO} apt-get install -y -qq nodejs
+                
+                # Clean up
+                rm -f nodesource_setup.sh
+                log_success "${ICON_SUCCESS} Node.js repository updated and installed."
+            else
+                log_error "${ICON_ERROR} Failed to download NodeSource setup script."
+            fi
         fi
     fi
     
@@ -346,8 +369,10 @@ install_npm_globals() {
                 return 1
             fi
         else
+            # Note: Linux installation is handled in install_core_packages now
+            # asking apt to install here might fallback to default repos if the previous step failed
             apt_update
-            apt_install nodejs npm
+            apt_install nodejs
         fi
     fi
 
@@ -757,7 +782,7 @@ EOF
 
 main() {
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  🚀 Dotfiles Setup - macOS & Ubuntu                       ║"
+    echo "║   🚀 Dotfiles Setup - macOS & Ubuntu                         ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     
@@ -882,7 +907,7 @@ main() {
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  ✅ Setup Complete!                                        ║"
+    echo "║   ✅ Setup Complete!                                         ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     log_info "📋 Next Steps:"
