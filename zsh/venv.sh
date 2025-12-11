@@ -185,10 +185,9 @@ PY
 _venv_show_help() {
     local func_name="$1"
     case "$func_name" in
-        "venv-activate"|"va")
+        "venv-activate")
             cat << 'EOF'
-Usage: venv-activate [PATH|--help] 
-       va [PATH|--help]
+Usage: venv-activate [PATH|--help]
 
 Activate a Python virtual environment.
 
@@ -197,25 +196,23 @@ Arguments:
                 If omitted, tries current $VIRTUAL_ENV or .venv
 
 Examples:
-  va                    # Activate .venv in current directory
-  va /path/to/myenv     # Activate specific environment
-  va myenv/bin/activate # Activate using activate script path
+  venv-activate                    # Activate .venv in current directory
+  venv-activate /path/to/myenv     # Activate specific environment
+  venv-activate myenv/bin/activate # Activate using activate script path
 
 Note: Automatically enables auto-activation and saves to history.
 EOF
             ;;
-        "venv-deactivate"|"vd")
+        "venv-deactivate")
             cat << 'EOF'
 Usage: venv-deactivate [--help]
-       vd [--help]
 
 Deactivate current virtual environment and disable auto-activation.
 EOF
             ;;
-        "venv-create"|"vc")
+        "venv-create")
             cat << 'EOF'
 Usage: venv-create [PATH] [PACKAGES...] [--help]
-       vc [PATH] [PACKAGES...] [--help]
 
 Create a new Python virtual environment using UV in centralized storage.
 A symlink will be created at PATH pointing to the actual environment.
@@ -230,20 +227,20 @@ Storage:
   Configuration is saved in: ~/.config/.path_to_venv
 
 Examples:
-  vc                           # Create .venv symlink with basic packages
-  vc myenv                     # Create myenv symlink with basic packages  
-  vc .venv numpy pandas        # Create .venv symlink with extra packages
+  venv-create                           # Create .venv symlink with basic packages
+  venv-create myenv                     # Create myenv symlink with basic packages
+  venv-create .venv numpy pandas        # Create .venv symlink with extra packages
 
 Basic packages installed: pip, uv, jupyter
 EOF
             ;;
-        "venv-select"|"vs")
+        "venv-select")
             cat << 'EOF'
 Usage: venv-select [--help]
-       vs [--help]
 
-Select and activate a virtual environment from history using fzf.
-Fallback to most recent if fzf is not available.
+Select and switch to a different virtual environment from centralized storage.
+If you already have the correct venv linked, it will just activate it.
+Use this to change which venv your current project uses.
 EOF
             ;;
         "venv-auto")
@@ -262,13 +259,12 @@ Environment Variables:
   VENV_AUTO_ACTIVATE_PATH - path to activate script
 EOF
             ;;
-        "venv-list"|"vl")
+        "venv-list")
             cat << 'EOF'
 Usage: venv-list [--help]
-       vl [--help]
 
-List all virtual environments from history with details.
-Shows path, existence status, and Python version if available.
+List all virtual environments in centralized storage with details.
+Shows path and Python version if available.
 EOF
             ;;
         "venv-detect")
@@ -277,17 +273,16 @@ Usage: venv-detect [--help]
 
 Detect and activate virtual environment in current directory.
 Looks for:
-  1. UV projects (pyproject.toml or uv.lock) 
+  1. UV projects (pyproject.toml or uv.lock)
   2. Standard .venv directory
   3. Other common venv directory names
 
 Used internally by auto-activation system.
 EOF
             ;;
-        "venv-reuse"|"vr")
+        "venv-reuse")
             cat << 'EOF'
 Usage: venv-reuse [--help]
-       vr [--help]
 
 Reuse an existing virtual environment from centralized storage.
 Select from available venvs using fzf and create a symlink at .venv.
@@ -298,14 +293,12 @@ This allows you to:
   - Save disk space by reusing existing environments
 
 Examples:
-  vr                           # Select and link to .venv
-  venv-reuse                   # Same as above
+  venv-reuse                           # Select and link to .venv
 EOF
             ;;
-        "venv-migrate-centralize"|"vmc")
+        "venv-migrate-centralize")
             cat << 'EOF'
 Usage: venv-migrate-centralize [VENV_PATH] [--help]
-       vmc [VENV_PATH] [--help]
 
 Migrate an existing local virtual environment to centralized storage.
 Replaces the local venv directory with a symlink to the centralized location.
@@ -320,37 +313,37 @@ This command will:
   4. Preserve all installed packages and configurations
 
 Examples:
-  vmc                          # Migrate .venv to centralized storage
-  vmc .venv                    # Same as above
-  venv-migrate-centralize myenv # Migrate custom venv directory
+  venv-migrate-centralize                          # Migrate .venv to centralized storage
+  venv-migrate-centralize .venv                    # Same as above
+  venv-migrate-centralize myenv                    # Migrate custom venv directory
 EOF
             ;;
-        "venv-help"|"vh")
+        "venv-help")
             cat << 'EOF'
 Virtual Environment Management Commands:
 
 Core Commands:
-  venv-activate, va [PATH]     Activate virtual environment
-  venv-deactivate, vd          Deactivate current environment  
-  venv-create, vc [PATH] [PKG] Create new UV virtual environment
-  venv-reuse, vr               Reuse existing venv from storage
-  venv-migrate-centralize, vmc Migrate local venv to centralized storage
-  venv-select, vs              Select from history with fzf
+  venv-activate [PATH]         Activate virtual environment
+  venv-deactivate              Deactivate current environment
+  venv-create [PATH] [PKG]     Create new UV virtual environment
+  venv-reuse                   Reuse existing venv from storage
+  venv-migrate-centralize      Migrate local venv to centralized storage
+  venv-select                  Select and switch venv from centralized storage
 
 Management:
   venv-auto [on|off|status]    Control auto-activation
-  venv-list, vl                List environments from history
+  venv-list                    List environments from centralized storage
   venv-detect                  Auto-detect environment in current dir
 
 Help:
-  venv-help, vh                Show this help
+  venv-help                    Show this help
   [command] --help             Show help for specific command
 
 Examples:
-  va                           # Activate .venv 
-  vc myproject numpy pandas    # Create environment with packages
-  vs                          # Select from history
-  venv-auto on                # Enable auto-activation
+  venv-activate                # Activate .venv
+  venv-create myproject numpy pandas    # Create environment with packages
+  venv-select                  # Switch to different venv
+  venv-auto on                 # Enable auto-activation
 EOF
             ;;
         *)
@@ -632,34 +625,120 @@ venv-create() {
     _venv_update_history "$activate_script"
 }
 
-# Select from history
+# Select and reuse existing virtual environment from centralized storage
 venv-select() {
     if [[ "$1" == "--help" ]]; then
         _venv_show_help "venv-select"
         return 0
     fi
 
-    if [[ ! -f "$VENV_HISTORY_FILE" ]]; then
-        echo "❌ No virtual environment history found. Use 'venv-activate' to create history."
+    # Get global storage path
+    local storage_path
+    storage_path=$(_venv_get_storage_path) || return 1
+
+    if [[ ! -d "$storage_path" ]]; then
+        echo "❌ Storage path does not exist: $storage_path"
         return 1
     fi
 
-    local selection=""
+    # Find all venv directories in storage
+    local -a venv_dirs=()
+    for dir in "$storage_path"/*(/N); do
+        if [[ -f "$dir/bin/activate" ]]; then
+            venv_dirs+=("${dir:t}")
+        fi
+    done
+
+    if (( ${#venv_dirs[@]} == 0 )); then
+        echo "❌ No virtual environments found in: $storage_path"
+        echo "ℹ️  Create one first with: venv-create"
+        return 1
+    fi
+
+    # Select venv using fzf
+    local selected_venv=""
     if command -v fzf >/dev/null 2>&1; then
-        selection=$(fzf --prompt="🐍 venv> " --height=40% --reverse < "$VENV_HISTORY_FILE")
+        selected_venv=$(printf "%s\n" "${venv_dirs[@]}" | fzf --prompt="🐍 venv> " --height=40% --reverse --header="Select venv to link to .venv")
     else
-        selection=$(head -n 1 "$VENV_HISTORY_FILE")
-        if [[ -n "$selection" ]]; then
-            echo "ℹ️  fzf not found; using most recent: $selection"
+        echo "Available virtual environments:"
+        local i=1
+        for venv in "${venv_dirs[@]}"; do
+            echo "  $i) $venv"
+            ((i++))
+        done
+        printf "Select number [1]: "
+        read -r selection
+        selection=${selection:-1}
+        if [[ "$selection" =~ ^[0-9]+$ ]] && (( selection > 0 && selection <= ${#venv_dirs[@]} )); then
+            selected_venv="${venv_dirs[$selection]}"
+        else
+            echo "❌ Invalid selection"
+            return 1
         fi
     fi
 
-    if [[ -z "$selection" ]]; then
+    if [[ -z "$selected_venv" ]]; then
         echo "❌ No environment selected"
         return 1
     fi
 
-    venv-activate "$selection"
+    local actual_venv_path="$storage_path/$selected_venv"
+    local venv_path=".venv"
+
+    # Check if .venv already exists and points to the selected venv
+    if [[ -L "$venv_path" ]]; then
+        local current_target="$(readlink "$venv_path")"
+        if [[ "$current_target" == "$actual_venv_path" ]]; then
+            echo "✅ Already linked to: $selected_venv"
+            echo "   Symlink: $venv_path -> $actual_venv_path"
+            # Just activate it
+            local activate_script="$actual_venv_path/bin/activate"
+            if [[ -f "$activate_script" ]]; then
+                venv-activate "$activate_script"
+            fi
+            return 0
+        fi
+    fi
+
+    # Check if .venv already exists (but points to different venv)
+    if [[ -e "$venv_path" ]] || [[ -L "$venv_path" ]]; then
+        if [[ -L "$venv_path" ]]; then
+            local link_target="$(readlink "$venv_path")"
+            echo "⚠️  Currently linked to different venv: $venv_path -> $link_target"
+        else
+            echo "⚠️  Path already exists: $venv_path"
+        fi
+        printf "Switch to '$selected_venv'? [y/N] "
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            rm -rf "$venv_path" || {
+                echo "❌ Failed to remove $venv_path"
+                return 1
+            }
+        else
+            echo "❌ Aborted"
+            return 1
+        fi
+    fi
+
+    # Create symlink
+    echo "🔗 Creating symlink: $venv_path -> $actual_venv_path"
+    ln -s "$actual_venv_path" "$venv_path" || {
+        echo "❌ Failed to create symlink"
+        return 1
+    }
+
+    echo "✅ Linked venv: $selected_venv"
+    echo "   Storage: $actual_venv_path"
+    echo "   Symlink: $venv_path"
+
+    # Activate the venv
+    local activate_script="$actual_venv_path/bin/activate"
+    if [[ -f "$activate_script" ]]; then
+        venv-activate "$activate_script"
+    else
+        echo "⚠️  Warning: activate script not found, symlink created but not activated"
+    fi
 }
 
 # Reuse existing virtual environment from centralized storage
@@ -722,15 +801,30 @@ venv-reuse() {
     local actual_venv_path="$storage_path/$selected_venv"
     local venv_path=".venv"
 
-    # Check if .venv already exists
+    # Check if .venv already exists and points to the selected venv
+    if [[ -L "$venv_path" ]]; then
+        local current_target="$(readlink "$venv_path")"
+        if [[ "$current_target" == "$actual_venv_path" ]]; then
+            echo "✅ Already linked to: $selected_venv"
+            echo "   Symlink: $venv_path -> $actual_venv_path"
+            # Just activate it
+            local activate_script="$actual_venv_path/bin/activate"
+            if [[ -f "$activate_script" ]]; then
+                venv-activate "$activate_script"
+            fi
+            return 0
+        fi
+    fi
+
+    # Check if .venv already exists (but points to different venv)
     if [[ -e "$venv_path" ]] || [[ -L "$venv_path" ]]; then
         if [[ -L "$venv_path" ]]; then
             local link_target="$(readlink "$venv_path")"
-            echo "⚠️  Symlink already exists: $venv_path -> $link_target"
+            echo "⚠️  Currently linked to different venv: $venv_path -> $link_target"
         else
             echo "⚠️  Path already exists: $venv_path"
         fi
-        printf "Remove and recreate? [y/N] "
+        printf "Switch to '$selected_venv'? [y/N] "
         read -r response
         if [[ "$response" =~ ^[Yy]$ ]]; then
             rm -rf "$venv_path" || {
@@ -905,38 +999,49 @@ venv-list() {
         return 0
     fi
 
-    if [[ ! -f "$VENV_HISTORY_FILE" ]]; then
-        echo "❌ No virtual environment history found"
+    # Get global storage path
+    local storage_path
+    storage_path=$(_venv_get_storage_path) || return 1
+
+    if [[ ! -d "$storage_path" ]]; then
+        echo "❌ Storage path does not exist: $storage_path"
         return 1
     fi
 
-    echo "🐍 Virtual Environment History:"
-    echo "================================"
+    # Find all venv directories in storage
+    local -a venv_dirs=()
+    for dir in "$storage_path"/*(/N); do
+        if [[ -f "$dir/bin/activate" ]]; then
+            venv_dirs+=("${dir:t}")
+        fi
+    done
+
+    if (( ${#venv_dirs[@]} == 0 )); then
+        echo "❌ No virtual environments found in: $storage_path"
+        echo "ℹ️  Create one first with: venv-create"
+        return 1
+    fi
+
+    echo "🐍 Virtual Environments in Centralized Storage:"
+    echo "=============================================="
     
     local count=1
-    while IFS= read -r path; do
-        [[ -z "$path" ]] && continue
-        
-        local env_dir="${path:h}"
-        local exists="❌"
+    for venv_name in "${venv_dirs[@]}"; do
+        local venv_path="$storage_path/$venv_name"
         local python_version=""
         
-        if [[ -f "$path" ]]; then
-            exists="✅"
-            # Try to get Python version
-            local python_exec="$env_dir/bin/python"
-            if [[ -f "$python_exec" ]]; then
-                python_version=$("$python_exec" --version 2>/dev/null | cut -d' ' -f2)
-            fi
+        # Try to get Python version
+        local python_exec="$venv_path/bin/python"
+        if [[ -f "$python_exec" ]]; then
+            python_version=$("$python_exec" --version 2>/dev/null | cut -d' ' -f2)
         fi
         
-        printf "%2d. %s %s\n" "$count" "$exists" "$(basename "$env_dir")"
-        printf "    📁 %s\n" "$env_dir"
+        printf "%2d. %s\n" "$count" "$venv_name"
+        printf "    📁 %s\n" "$venv_path"
         [[ -n "$python_version" ]] && printf "    🐍 Python %s\n" "$python_version"
         echo
-        
         ((count++))
-    done < "$VENV_HISTORY_FILE"
+    done
 }
 
 # Auto-detect environment in current directory
@@ -1032,20 +1137,10 @@ _venv_auto_startup() {
 }
 
 # ==============================================================================
-# Aliases for convenience
+# Legacy compatibility (will be removed)
 # ==============================================================================
-
-# Short aliases
-alias va='venv-activate'
-alias vd='venv-deactivate' 
-alias vc='venv-create'
-alias vr='venv-reuse'
-alias vmc='venv-migrate-centralize'
-alias vs='venv-select'
-alias vl='venv-list'
-alias vh='venv-help'
 
 # Legacy compatibility (will be removed)
 alias atv='venv-activate'
 alias atv_select='venv-select' 
-alias auto_atv_disable='vd && venv-auto off'
+alias auto_atv_disable='venv-deactivate && venv-auto off'
