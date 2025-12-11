@@ -847,12 +847,12 @@ venv-auto() {
             echo "📁 Path: $path"
             ;;
         on|1|true|yes)
+            set_env VENV_AUTO_ACTIVATE on
+            export VENV_AUTO_ACTIVATE="on"
             if [[ -n "$VIRTUAL_ENV" ]]; then
                 local activate_path="$VIRTUAL_ENV/bin/activate"
                 if [[ -f "$activate_path" ]]; then
-                    set_env VENV_AUTO_ACTIVATE on
                     set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
-                    export VENV_AUTO_ACTIVATE="on"
                     export VENV_AUTO_ACTIVATE_PATH="$activate_path"
                     echo "✅ Enabled auto-activation for current venv"
                     echo "   Path: $activate_path"
@@ -861,9 +861,9 @@ venv-auto() {
                     return 1
                 fi
             else
-                echo "⚠️  No virtual environment currently active"
-                echo "💡 First activate a venv, then run 'venv-auto on'"
-                return 1
+                unset_env VENV_AUTO_ACTIVATE_PATH
+                unset VENV_AUTO_ACTIVATE_PATH
+                echo "✅ Enabled auto-detection on directory change"
             fi
             ;;
         off|0|false|no)
@@ -1021,6 +1021,23 @@ _venv_auto_startup() {
     echo "🐍 source \033[32m'$activate_path'\033[0m"
     source "$activate_path"
 }
+
+# Auto-activation on directory change
+_venv_auto_chpwd() {
+    local flag="${VENV_AUTO_ACTIVATE:-off}"
+    if [[ "${flag:l}" != "on" ]]; then
+        return
+    fi
+
+    # Try to detect and activate venv in current directory (silently)
+    venv-detect >/dev/null 2>&1
+}
+
+# Set up chpwd hook for auto-activation (only once)
+if [[ ! "${chpwd_functions[(r)_venv_auto_chpwd]}" == "_venv_auto_chpwd" ]]; then
+    autoload -Uz add-zsh-hook
+    add-zsh-hook chpwd _venv_auto_chpwd
+fi
 
 # ==============================================================================
 # Legacy compatibility (will be removed)
