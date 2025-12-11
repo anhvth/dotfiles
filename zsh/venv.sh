@@ -258,6 +258,20 @@ Environment Variables:
   VENV_AUTO_ACTIVATE_PATH - path to activate script
 EOF
             ;;
+        "venv-status")
+            cat << 'EOF'
+Usage: venv-status [--help]
+
+Show comprehensive virtual environment status information.
+
+Displays:
+  • Current active environment details
+  • Auto-activation configuration
+  • Centralized storage information
+  • Current directory detection status
+  • Environment variables
+EOF
+            ;;
         "venv-list")
             cat << 'EOF'
 Usage: venv-list [--help]
@@ -316,6 +330,7 @@ Core Commands:
 
 Management:
   venv-auto [on|off|status]    Control auto-activation
+  venv-status                  Show comprehensive environment status
   venv-list                    List environments from centralized storage
   venv-detect                  Auto-detect environment in current dir
 
@@ -419,6 +434,17 @@ venv-activate() {
         return 1
     fi
     
+    # Set meaningful prompt name (use real venv name, not symlink name)
+    local real_venv_path="$(realpath "$VIRTUAL_ENV")"
+    local real_venv_name="$(basename "$real_venv_path")"
+    export VIRTUAL_ENV_PROMPT="$real_venv_name"
+    
+    # Rebuild PS1 with the new prompt name
+    if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
+        PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+        export PS1
+    fi
+    
     # Enable auto-activation
     set_env VENV_AUTO_ACTIVATE on
     set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
@@ -429,8 +455,10 @@ venv-activate() {
     local python_path
     python_path=$(command -v python)
     if [[ -n "$python_path" ]]; then
-        _venv_update_vscode_python_path "$python_path"
+        _venv_update_vscode_python_path "$python_path" || true
     fi
+    
+    return 0
 }
 
 # Deactivate virtual environment  
@@ -679,6 +707,13 @@ venv-select() {
             if [[ -f "$activate_script" ]]; then
                 echo "🔄 Activating..."
                 source "$activate_script"
+                # Set meaningful prompt name
+                export VIRTUAL_ENV_PROMPT="$selected_venv"
+                # Rebuild PS1 with the new prompt name
+                if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
+                    PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+                    export PS1
+                fi
                 set_env VENV_AUTO_ACTIVATE on
                 set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
                 export VENV_AUTO_ACTIVATE="on"
@@ -881,6 +916,108 @@ venv-auto() {
     esac
 }
 
+# Show comprehensive virtual environment status
+venv-status() {
+    if [[ "$1" == "--help" ]]; then
+        _venv_show_help "venv-status"
+        return 0
+    fi
+
+    echo "🐍 Virtual Environment Status"
+    echo "================================"
+
+    # Current environment status
+    echo ""
+    echo "📍 Current Environment:"
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        local venv_name="${VIRTUAL_ENV:t}"
+        local python_version=""
+        if [[ -f "$VIRTUAL_ENV/bin/python" ]]; then
+            python_version=$("$VIRTUAL_ENV/bin/python" --version 2>/dev/null | awk '{print $2}')
+        fi
+        echo "   ✅ Active: $venv_name"
+        echo "   🐍 Python: ${python_version:-unknown}"
+        echo "   📁 Path: $VIRTUAL_ENV"
+    else
+        echo "   ❌ None active"
+    fi
+
+    # Auto-activation status
+    echo ""
+    echo "🔄 Auto-Activation:"
+    local auto_flag="${VENV_AUTO_ACTIVATE:-off}"
+    local auto_path="${VENV_AUTO_ACTIVATE_PATH:-none}"
+    if [[ "${auto_flag:l}" == "on" ]]; then
+        echo "   ✅ Enabled"
+        if [[ "$auto_path" != "none" && -f "$auto_path" ]]; then
+            echo "   🎯 Startup Environment: ${auto_path:h:t}"
+            echo "   📄 Script: $auto_path"
+        else
+            echo "   🔍 Directory Detection: Enabled"
+        fi
+    else
+        echo "   ❌ Disabled"
+    fi
+
+    # Storage configuration
+    echo ""
+    echo "💾 Centralized Storage:"
+    local storage_path
+    if storage_path=$(_venv_get_storage_path 2>/dev/null); then
+        echo "   📁 Location: $storage_path"
+        if [[ -d "$storage_path" ]]; then
+            local venv_count=$(find "$storage_path" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
+            echo "   📊 Environments: $venv_count stored"
+        else
+            echo "   ⚠️  Directory not found"
+        fi
+    else
+        echo "   ❌ Not configured"
+    fi
+
+    # Current directory detection
+    echo ""
+    echo "🔍 Current Directory:"
+    local detected=""
+    if [[ -L ".venv" ]]; then
+        local target="$(readlink ".venv")"
+        if [[ -f "$target/bin/activate" ]]; then
+            detected="Centralized symlink (.venv → ${target:t})"
+        fi
+    elif [[ -f "pyproject.toml" || -f "uv.lock" ]]; then
+        if command -v uv >/dev/null 2>&1; then
+            detected="UV project"
+        fi
+    else
+        local venv_dirs=(".venv" "venv" "env")
+        for dir in "${venv_dirs[@]}"; do
+            if [[ -f "$dir/bin/activate" ]]; then
+                detected="Local $dir directory"
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$detected" ]]; then
+        echo "   ✅ Detected: $detected"
+    else
+        echo "   ℹ️  No environment detected"
+    fi
+
+    # Environment variables
+    echo ""
+    echo "⚙️  Environment Variables:"
+    echo "   VENV_AUTO_ACTIVATE: ${VENV_AUTO_ACTIVATE:-not set}"
+    echo "   VENV_AUTO_ACTIVATE_PATH: ${VENV_AUTO_ACTIVATE_PATH:-not set}"
+    echo "   VIRTUAL_ENV: ${VIRTUAL_ENV:-not set}"
+
+    echo ""
+    echo "💡 Tips:"
+    echo "   • Use 'venv-auto on/off' to control auto-activation"
+    echo "   • Use 'venv-create' to create new environments"
+    echo "   • Use 'venv-list' to see all stored environments"
+}
+
 # List environments
 venv-list() {
     if [[ "$1" == "--help" ]]; then
@@ -1020,6 +1157,18 @@ _venv_auto_startup() {
 
     echo "🐍 source \033[32m'$activate_path'\033[0m"
     source "$activate_path"
+    
+    # Set meaningful prompt name (use real venv name, not symlink name)
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        local real_venv_path="$(realpath "$VIRTUAL_ENV")"
+        local real_venv_name="$(basename "$real_venv_path")"
+        export VIRTUAL_ENV_PROMPT="$real_venv_name"
+        # Rebuild PS1 with the new prompt name
+        if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
+            PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+            export PS1
+        fi
+    fi
 }
 
 # Auto-activation on directory change
