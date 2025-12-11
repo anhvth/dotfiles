@@ -669,11 +669,21 @@ venv-select() {
         local current_target="$(readlink "$venv_path")"
         if [[ "$current_target" == "$actual_venv_path" ]]; then
             echo "✅ Already linked to: $selected_venv"
-            echo "   Symlink: $venv_path -> $actual_venv_path"
-            # Just activate it
+            # Check if already activated
+            if [[ -n "$VIRTUAL_ENV" && "$VIRTUAL_ENV" == "$actual_venv_path" ]]; then
+                echo "   Already activated"
+                return 0
+            fi
+            # Not activated yet, activate it
             local activate_script="$actual_venv_path/bin/activate"
             if [[ -f "$activate_script" ]]; then
-                venv-activate "$activate_script"
+                echo "🔄 Activating..."
+                source "$activate_script"
+                set_env VENV_AUTO_ACTIVATE on
+                set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
+                export VENV_AUTO_ACTIVATE="on"
+                export VENV_AUTO_ACTIVATE_PATH="$activate_script"
+                echo "✅ Activated: $selected_venv"
             fi
             return 0
         fi
@@ -999,8 +1009,3 @@ _venv_auto_startup() {
 # ==============================================================================
 # Legacy compatibility (will be removed)
 # ==============================================================================
-
-# Legacy compatibility (will be removed)
-alias atv='venv-activate'
-alias atv_select='venv-select' 
-alias auto_atv_disable='venv-deactivate && venv-auto off'
