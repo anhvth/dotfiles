@@ -847,8 +847,24 @@ venv-auto() {
             echo "📁 Path: $path"
             ;;
         on|1|true|yes)
-            set_env VENV_AUTO_ACTIVATE on
-            echo "✅ Enabled auto-activation on shell startup"
+            if [[ -n "$VIRTUAL_ENV" ]]; then
+                local activate_path="$VIRTUAL_ENV/bin/activate"
+                if [[ -f "$activate_path" ]]; then
+                    set_env VENV_AUTO_ACTIVATE on
+                    set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
+                    export VENV_AUTO_ACTIVATE="on"
+                    export VENV_AUTO_ACTIVATE_PATH="$activate_path"
+                    echo "✅ Enabled auto-activation for current venv"
+                    echo "   Path: $activate_path"
+                else
+                    echo "⚠️  Current venv activation script not found"
+                    return 1
+                fi
+            else
+                echo "⚠️  No virtual environment currently active"
+                echo "💡 First activate a venv, then run 'venv-auto on'"
+                return 1
+            fi
             ;;
         off|0|false|no)
             unset_env VENV_AUTO_ACTIVATE
