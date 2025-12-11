@@ -284,6 +284,47 @@ Looks for:
 Used internally by auto-activation system.
 EOF
             ;;
+        "venv-reuse"|"vr")
+            cat << 'EOF'
+Usage: venv-reuse [--help]
+       vr [--help]
+
+Reuse an existing virtual environment from centralized storage.
+Select from available venvs using fzf and create a symlink at .venv.
+
+This allows you to:
+  - Share venvs across multiple projects
+  - Avoid recreating environments with the same dependencies
+  - Save disk space by reusing existing environments
+
+Examples:
+  vr                           # Select and link to .venv
+  venv-reuse                   # Same as above
+EOF
+            ;;
+        "venv-migrate-centralize"|"vmc")
+            cat << 'EOF'
+Usage: venv-migrate-centralize [VENV_PATH] [--help]
+       vmc [VENV_PATH] [--help]
+
+Migrate an existing local virtual environment to centralized storage.
+Replaces the local venv directory with a symlink to the centralized location.
+
+Arguments:
+  VENV_PATH     Path to local venv directory (default: .venv)
+
+This command will:
+  1. Verify the path is a real directory (not already a symlink)
+  2. Move the venv to centralized storage with current directory name
+  3. Create a symlink at the original location
+  4. Preserve all installed packages and configurations
+
+Examples:
+  vmc                          # Migrate .venv to centralized storage
+  vmc .venv                    # Same as above
+  venv-migrate-centralize myenv # Migrate custom venv directory
+EOF
+            ;;
         "venv-help"|"vh")
             cat << 'EOF'
 Virtual Environment Management Commands:
@@ -292,6 +333,8 @@ Core Commands:
   venv-activate, va [PATH]     Activate virtual environment
   venv-deactivate, vd          Deactivate current environment  
   venv-create, vc [PATH] [PKG] Create new UV virtual environment
+  venv-reuse, vr               Reuse existing venv from storage
+  venv-migrate-centralize, vmc Migrate local venv to centralized storage
   venv-select, vs              Select from history with fzf
 
 Management:
@@ -487,10 +530,8 @@ venv-create() {
 
     local -a extra_packages=("$@")
 
-    # Generate unique name for venv based on project path
-    local project_dir="${PWD:A}"
-    local venv_name="${project_dir//\//_}"
-    venv_name="${venv_name#_}"  # Remove leading underscore
+    # Generate venv name from current directory name
+    local venv_name="${PWD:t}"
     local actual_venv_path="$storage_path/$venv_name"
 
     # Check if symlink already exists
@@ -619,6 +660,203 @@ venv-select() {
     fi
 
     venv-activate "$selection"
+}
+
+# Reuse existing virtual environment from centralized storage
+venv-reuse() {
+    if [[ "$1" == "--help" ]]; then
+        _venv_show_help "venv-reuse"
+        return 0
+    fi
+
+    # Get global storage path
+    local storage_path
+    storage_path=$(_venv_get_storage_path) || return 1
+
+    if [[ ! -d "$storage_path" ]]; then
+        echo "❌ Storage path does not exist: $storage_path"
+        return 1
+    fi
+
+    # Find all venv directories in storage
+    local -a venv_dirs=()
+    for dir in "$storage_path"/*(/N); do
+        if [[ -f "$dir/bin/activate" ]]; then
+            venv_dirs+=("${dir:t}")
+        fi
+    done
+
+    if (( ${#venv_dirs[@]} == 0 )); then
+        echo "❌ No virtual environments found in: $storage_path"
+        echo "ℹ️  Create one first with: venv-create"
+        return 1
+    fi
+
+    # Select venv using fzf
+    local selected_venv=""
+    if command -v fzf >/dev/null 2>&1; then
+        selected_venv=$(printf "%s\n" "${venv_dirs[@]}" | fzf --prompt="🔗 Reuse venv> " --height=40% --reverse --header="Select venv to link to .venv")
+    else
+        echo "Available virtual environments:"
+        local i=1
+        for venv in "${venv_dirs[@]}"; do
+            echo "  $i) $venv"
+            ((i++))
+        done
+        printf "Select number [1]: "
+        read -r selection
+        selection=${selection:-1}
+        if [[ "$selection" =~ ^[0-9]+$ ]] && (( selection > 0 && selection <= ${#venv_dirs[@]} )); then
+            selected_venv="${venv_dirs[$selection]}"
+        else
+            echo "❌ Invalid selection"
+            return 1
+        fi
+    fi
+
+    if [[ -z "$selected_venv" ]]; then
+        echo "❌ No environment selected"
+        return 1
+    fi
+
+    local actual_venv_path="$storage_path/$selected_venv"
+    local venv_path=".venv"
+
+    # Check if .venv already exists
+    if [[ -e "$venv_path" ]] || [[ -L "$venv_path" ]]; then
+        if [[ -L "$venv_path" ]]; then
+            local link_target="$(readlink "$venv_path")"
+            echo "⚠️  Symlink already exists: $venv_path -> $link_target"
+        else
+            echo "⚠️  Path already exists: $venv_path"
+        fi
+        printf "Remove and recreate? [y/N] "
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            rm -rf "$venv_path" || {
+                echo "❌ Failed to remove $venv_path"
+                return 1
+            }
+        else
+            echo "❌ Aborted"
+            return 1
+        fi
+    fi
+
+    # Create symlink
+    echo "🔗 Creating symlink: $venv_path -> $actual_venv_path"
+    ln -s "$actual_venv_path" "$venv_path" || {
+        echo "❌ Failed to create symlink"
+        return 1
+    }
+
+    echo "✅ Linked venv: $selected_venv"
+    echo "   Storage: $actual_venv_path"
+    echo "   Symlink: $venv_path"
+
+    # Activate the venv
+    local activate_script="$actual_venv_path/bin/activate"
+    if [[ -f "$activate_script" ]]; then
+        venv-activate "$activate_script"
+    else
+        echo "⚠️  Warning: activate script not found, symlink created but not activated"
+    fi
+}
+
+# Migrate existing local venv to centralized storage
+venv-migrate-centralize() {
+    if [[ "$1" == "--help" ]]; then
+        _venv_show_help "venv-migrate-centralize"
+        return 0
+    fi
+
+    local venv_path="${1:-.venv}"
+
+    # Check if path exists
+    if [[ ! -e "$venv_path" ]]; then
+        echo "❌ Path does not exist: $venv_path"
+        return 1
+    fi
+
+    # Check if it's already a symlink
+    if [[ -L "$venv_path" ]]; then
+        local link_target="$(readlink "$venv_path")"
+        echo "ℹ️  Already a symlink: $venv_path -> $link_target"
+        echo "No migration needed."
+        return 0
+    fi
+
+    # Check if it's a directory
+    if [[ ! -d "$venv_path" ]]; then
+        echo "❌ Not a directory: $venv_path"
+        return 1
+    fi
+
+    # Verify it's a valid venv
+    if [[ ! -f "$venv_path/bin/activate" ]]; then
+        echo "❌ Not a valid virtual environment (missing bin/activate): $venv_path"
+        return 1
+    fi
+
+    # Get global storage path
+    local storage_path
+    storage_path=$(_venv_get_storage_path) || return 1
+
+    # Generate venv name from current directory
+    local venv_name="${PWD:t}"
+    local target_path="$storage_path/$venv_name"
+
+    # Check if target already exists
+    if [[ -e "$target_path" ]]; then
+        echo "⚠️  Target already exists: $target_path"
+        printf "Overwrite? [y/N] "
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            echo "🗑️  Removing existing target..."
+            rm -rf "$target_path" || {
+                echo "❌ Failed to remove existing target"
+                return 1
+            }
+        else
+            echo "❌ Aborted"
+            return 1
+        fi
+    fi
+
+    # Get absolute path before moving
+    local venv_abs_path="${venv_path:A}"
+
+    echo "📦 Migrating virtual environment..."
+    echo "   From: $venv_abs_path"
+    echo "   To:   $target_path"
+
+    # Move the directory to centralized storage
+    mkdir -p "$(dirname "$target_path")" || {
+        echo "❌ Failed to create storage directory"
+        return 1
+    }
+
+    mv "$venv_abs_path" "$target_path" || {
+        echo "❌ Failed to move virtual environment"
+        return 1
+    }
+
+    # Create symlink at original location
+    echo "🔗 Creating symlink: $venv_path -> $target_path"
+    ln -s "$target_path" "$venv_path" || {
+        echo "❌ Failed to create symlink"
+        echo "⚠️  Your venv has been moved to: $target_path"
+        echo "You can manually create the symlink with:"
+        echo "  ln -s '$target_path' '$venv_path'"
+        return 1
+    }
+
+    echo "✅ Migration complete!"
+    echo "   Storage: $target_path"
+    echo "   Symlink: $venv_path"
+    echo ""
+    echo "ℹ️  Your virtual environment works exactly as before."
+    echo "All tools and scripts will continue to function normally."
 }
 
 # ==============================================================================
@@ -801,6 +1039,8 @@ _venv_auto_startup() {
 alias va='venv-activate'
 alias vd='venv-deactivate' 
 alias vc='venv-create'
+alias vr='venv-reuse'
+alias vmc='venv-migrate-centralize'
 alias vs='venv-select'
 alias vl='venv-list'
 alias vh='venv-help'
