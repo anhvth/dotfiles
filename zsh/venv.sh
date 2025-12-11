@@ -8,6 +8,64 @@
 # Global variables
 VENV_HISTORY_FILE="$HOME/.cache/dotfiles/venv_history"
 VENV_HISTORY_LIMIT=30
+VENV_STORAGE_CONFIG="$HOME/.config/.path_to_venv"
+
+# Get or prompt for global venv storage path
+_venv_get_storage_path() {
+    # Check if config file exists and has content
+    if [[ -f "$VENV_STORAGE_CONFIG" ]]; then
+        local storage_path=$(cat "$VENV_STORAGE_CONFIG" 2>/dev/null | tr -d '\n\r')
+        if [[ -n "$storage_path" ]] && [[ -d "$storage_path" ]]; then
+            echo "$storage_path"
+            return 0
+        fi
+    fi
+
+    # Prompt user for storage path
+    echo "" >&2
+    echo "⚠️  No global virtual environment storage path configured." >&2
+    echo "" >&2
+    echo "To save disk space in your code directories, virtual environments" >&2
+    echo "will be stored in a centralized location and symlinked." >&2
+    echo "" >&2
+    echo "Suggested locations:" >&2
+    echo "  - /mnt/large_space/all_venvs/" >&2
+    echo "  - $HOME/.local/share/venvs/" >&2
+    echo "  - /opt/venvs/" >&2
+    echo "" >&2
+    printf "Enter path for storing virtual environments: " >&2
+    read storage_path
+
+    # Validate input
+    if [[ -z "$storage_path" ]]; then
+        echo "❌ No path provided" >&2
+        return 1
+    fi
+
+    # Expand tilde and remove trailing slashes
+    storage_path="${storage_path/#\~/$HOME}"
+    storage_path="${storage_path%%/}"
+
+    # Create directory if it doesn't exist
+    if [[ ! -d "$storage_path" ]]; then
+        echo "📁 Creating directory: $storage_path" >&2
+        mkdir -p "$storage_path" || {
+            echo "❌ Failed to create directory: $storage_path" >&2
+            return 1
+        }
+    fi
+
+    # Save to config file
+    mkdir -p "$(dirname "$VENV_STORAGE_CONFIG")" || return 1
+    echo "$storage_path" > "$VENV_STORAGE_CONFIG" || {
+        echo "❌ Failed to save config to $VENV_STORAGE_CONFIG" >&2
+        return 1
+    }
+
+    echo "✅ Saved storage path to: $VENV_STORAGE_CONFIG" >&2
+    echo "$storage_path"
+    return 0
+}
 
 # Persist VS Code Python interpreter without spamming jq errors
 _venv_update_vscode_python_path() {
@@ -159,39 +217,43 @@ EOF
 Usage: venv-create [PATH] [PACKAGES...] [--help]
        vc [PATH] [PACKAGES...] [--help]
 
-Create a new Python virtual environment using UV.
+Create a new Python virtual environment using UV in centralized storage.
+A symlink will be created at PATH pointing to the actual environment.
 
 Arguments:
-  PATH          Path for new virtualenv (default: .venv)
+  PATH          Path for symlink to virtualenv (default: .venv)
   PACKAGES      Additional packages to install
 
+Storage:
+  Virtual environments are stored in a centralized location to save space.
+  The first time you run this, you'll be prompted to set the storage path.
+  Configuration is saved in: ~/.config/.path_to_venv
+
 Examples:
-  vc                           # Create .venv with basic packages
-  vc myenv                     # Create myenv with basic packages  
-  vc .venv numpy pandas        # Create .venv with extra packages
+  vc                           # Create .venv symlink with basic packages
+  vc myenv                     # Create myenv symlink with basic packages  
+  vc .venv numpy pandas        # Create .venv symlink with extra packages
 
 Basic packages installed: pip, uv, jupyter
 EOF
             ;;
-                "venv-create"|"vc")
+        "venv-select"|"vs")
             cat << 'EOF'
-Usage: venv-create [UV_OPTIONS...] [PATH] [PACKAGES...] [--help]
-             vc [UV_OPTIONS...] [PATH] [PACKAGES...] [--help]
+Usage: venv-select [--help]
+       vs [--help]
 
 Select and activate a virtual environment from history using fzf.
 Fallback to most recent if fzf is not available.
 EOF
-    UV_OPTIONS    Flags passed directly to 'uv venv' (e.g. --python 3.13)
-    PATH          Path for new virtualenv (default: .venv)
-    PACKAGES      Additional packages to install into the environment
+            ;;
+        "venv-auto")
             cat << 'EOF'
 Usage: venv-auto [on|off|status|--help]
-    vc                                 # Create .venv with basic packages
-    vc myenv                           # Create myenv with basic packages  
-    vc --python 3.13                   # Create .venv targeting Python 3.13
-    vc .venv numpy pandas              # Create .venv with extra packages
 
-Basic packages installed: pip, uv, jupyter
+Control automatic virtual environment activation.
+
+Arguments:
+  on       Enable auto-activation  
   off      Disable auto-activation  
   status   Show current auto-activation status (default)
 
@@ -378,7 +440,7 @@ venv-deactivate() {
     echo "✅ Deactivated virtualenv: $(basename "$old_env")"
 }
 
-# Create new virtual environment
+# Create new virtual environment in centralized storage with symlink
 venv-create() {
     if [[ "$1" == "--help" ]]; then
         _venv_show_help "venv-create"
@@ -389,6 +451,10 @@ venv-create() {
         echo "❌ UV not found. Please install UV first."
         return 1
     fi
+
+    # Get global storage path (will prompt if not configured)
+    local storage_path
+    storage_path=$(_venv_get_storage_path) || return 1
 
     local -a uv_args=()
     local venv_path=""
@@ -421,12 +487,52 @@ venv-create() {
 
     local -a extra_packages=("$@")
 
-    echo "🔨 Creating virtual environment at: $venv_path"
-    if (( ${#uv_args[@]} )); then
-        uv venv "${uv_args[@]}" "$venv_path" || return 1
-    else
-        uv venv "$venv_path" || return 1
+    # Generate unique name for venv based on project path
+    local project_dir="${PWD:A}"
+    local venv_name="${project_dir//\//_}"
+    venv_name="${venv_name#_}"  # Remove leading underscore
+    local actual_venv_path="$storage_path/$venv_name"
+
+    # Check if symlink already exists
+    if [[ -e "$venv_path" ]] || [[ -L "$venv_path" ]]; then
+        if [[ -L "$venv_path" ]]; then
+            local link_target="$(readlink "$venv_path")"
+            echo "⚠️  Symlink already exists: $venv_path -> $link_target"
+        else
+            echo "⚠️  Path already exists: $venv_path"
+        fi
+        printf "Remove and recreate? [y/N] "
+        read -r response
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            rm -rf "$venv_path" || {
+                echo "❌ Failed to remove $venv_path"
+                return 1
+            }
+        else
+            echo "❌ Aborted"
+            return 1
+        fi
     fi
+
+    # Create directory in storage location
+    echo "🔨 Creating virtual environment in: $actual_venv_path"
+    mkdir -p "$(dirname "$actual_venv_path")" || {
+        echo "❌ Failed to create storage directory"
+        return 1
+    }
+
+    if (( ${#uv_args[@]} )); then
+        uv venv "${uv_args[@]}" "$actual_venv_path" || return 1
+    else
+        uv venv "$actual_venv_path" || return 1
+    fi
+
+    # Create symlink
+    echo "🔗 Creating symlink: $venv_path -> $actual_venv_path"
+    ln -s "$actual_venv_path" "$venv_path" || {
+        echo "❌ Failed to create symlink"
+        return 1
+    }
 
     local venv_root="${venv_path:A}"
     local activate_script="$venv_root/bin/activate"
@@ -452,6 +558,8 @@ venv-create() {
     fi
 
     echo "✅ Virtual environment created and activated!"
+    echo "   Storage: $actual_venv_path"
+    echo "   Symlink: $venv_path"
 
     # Assert tools are from venv
     local -a tools=(pip jupyter)
@@ -477,113 +585,7 @@ venv-create() {
     # Enable auto-activation and update history
     set_env VENV_AUTO_ACTIVATE on
     set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
-    export VENV_AUTO_ACTIVATE="on"    # ...existing code...
-    
-    # Create new virtual environment
-    venv-create() {
-        if [[ "$1" == "--help" ]]; then
-            _venv_show_help "venv-create"
-            return 0
-        fi
-    
-        if ! command -v uv >/dev/null 2>&1; then
-            echo "❌ UV not found. Please install UV first."
-            return 1
-        fi
-    
-        local -a uv_args=()
-        local venv_path=""
-    
-        while (( $# > 0 )); do
-            case "$1" in
-                --help)
-                    _venv_show_help "venv-create"
-                    return 0
-                    ;;
-                --)
-                    shift
-                    break
-                    ;;
-                -*)
-                    uv_args+=("$1")
-                    shift
-                    ;;
-                *)
-                    venv_path="$1"
-                    shift
-                    break
-                    ;;
-            esac
-        done
-    
-        if [[ -z "$venv_path" ]]; then
-            venv_path=".venv"
-        fi
-    
-        local -a extra_packages=("$@")
-    
-        echo "🔨 Creating virtual environment at: $venv_path"
-        if (( ${#uv_args[@]} )); then
-            uv venv "${uv_args[@]}" "$venv_path" || return 1
-        else
-            uv venv "$venv_path" || return 1
-        fi
-    
-        local venv_root="${venv_path:A}"
-        local activate_script="$venv_root/bin/activate"
-    
-        if [[ ! -f "$activate_script" ]]; then
-            echo "❌ Activate script not found at $activate_script"
-            return 1
-        fi
-    
-        echo "📦 Installing basic packages..."
-        if ! source "$activate_script"; then
-            echo "❌ Failed to source activate script: $activate_script"
-            return 1
-        fi
-    
-        hash -r 2>/dev/null || true
-    
-        # Install basic packages
-        if (( ${#extra_packages[@]} )); then
-            uv pip install pip uv jupyter "${extra_packages[@]}" || return 1
-        else
-            uv pip install pip uv jupyter || return 1
-        fi
-    
-        echo "✅ Virtual environment created and activated!"
-    
-        # Assert tools are from venv
-        local -a tools=(pip jupyter)
-        local venv_bin="$venv_root/bin"
-        for cmd in "${tools[@]}"; do
-            local cmd_path=$(command -v "$cmd" 2>/dev/null)
-            local expected="$venv_bin/$cmd"
-            if [[ -z "$cmd_path" ]]; then
-                echo "❌ $cmd not found after installation"
-                return 1
-            fi
-            cmd_path="${cmd_path:A}"
-            expected="${expected:A}"
-            if [[ "$cmd_path" != "$expected" ]]; then
-                echo "❌ $cmd not from venv: $cmd_path"
-                echo "   Expected: $expected"
-                return 1
-            fi
-            echo "✅ $cmd: $cmd_path"
-        done
-    
-        # Enable auto-activation and update history
-        set_env VENV_AUTO_ACTIVATE on
-        set_env VENV_AUTO_ACTIVATE_PATH "$activate_script"
-        export VENV_AUTO_ACTIVATE="on"
-        export VENV_AUTO_ACTIVATE_PATH="$activate_script"
-    
-        _venv_update_history "$activate_script"
-    }
-    
-    # ...existing code...
+    export VENV_AUTO_ACTIVATE="on"
     export VENV_AUTO_ACTIVATE_PATH="$activate_script"
 
     _venv_update_history "$activate_script"
