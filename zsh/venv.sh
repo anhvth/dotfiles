@@ -198,8 +198,6 @@ Examples:
   venv-activate                    # Activate .venv in current directory
   venv-activate /path/to/myenv     # Activate specific environment
   venv-activate myenv/bin/activate # Activate using activate script path
-
-Note: Automatically enables auto-activation and saves to history.
 EOF
             ;;
         "venv-deactivate")
@@ -242,20 +240,23 @@ If you already have the correct venv linked, it will just activate it.
 Use this to change which venv your current project uses.
 EOF
             ;;
+
         "venv-auto")
             cat << 'EOF'
 Usage: venv-auto [on|off|status|--help]
 
-Control automatic virtual environment activation.
+Control automatic virtual environment activation at shell startup.
 
 Arguments:
-  on       Enable auto-activation  
-  off      Disable auto-activation  
+  on       Enable auto-activation at startup
+  off      Disable auto-activation at startup
   status   Show current auto-activation status (default)
 
 Environment Variables:
   VENV_AUTO_ACTIVATE      - on/off flag
   VENV_AUTO_ACTIVATE_PATH - path to activate script
+
+Note: Auto-activation only works at shell startup, not when changing directories.
 EOF
             ;;
         "venv-status")
@@ -329,7 +330,7 @@ Core Commands:
   venv-migrate-centralize      Migrate local venv to centralized storage
 
 Management:
-  venv-auto [on|off|status]    Control auto-activation
+  venv-auto [on|off|status]    Control auto-activation at startup
   venv-status                  Show comprehensive environment status
   venv-list                    List environments from centralized storage
   venv-detect                  Auto-detect environment in current dir
@@ -342,7 +343,6 @@ Examples:
   venv-activate                # Activate .venv
   venv-create myproject numpy pandas    # Create environment with packages
   venv-select                  # Switch to different venv
-  venv-auto on                 # Enable auto-activation
 EOF
             ;;
         *)
@@ -865,57 +865,6 @@ venv-migrate-centralize() {
 # Management Functions  
 # ==============================================================================
 
-# Auto-activation control
-venv-auto() {
-    local mode="${1:-status}"
-    
-    if [[ "$mode" == "--help" ]]; then
-        _venv_show_help "venv-auto"
-        return 0
-    fi
-
-    case "${mode:l}" in
-        status)
-            local current=$(print -r -- ${VENV_AUTO_ACTIVATE:-off})
-            local path="${VENV_AUTO_ACTIVATE_PATH:-none}"
-            echo "🔧 Auto-activation: $current"
-            echo "📁 Path: $path"
-            ;;
-        on|1|true|yes)
-            set_env VENV_AUTO_ACTIVATE on
-            export VENV_AUTO_ACTIVATE="on"
-            if [[ -n "$VIRTUAL_ENV" ]]; then
-                local activate_path="$VIRTUAL_ENV/bin/activate"
-                if [[ -f "$activate_path" ]]; then
-                    set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
-                    export VENV_AUTO_ACTIVATE_PATH="$activate_path"
-                    echo "✅ Enabled auto-activation for current venv"
-                    echo "   Path: $activate_path"
-                else
-                    echo "⚠️  Current venv activation script not found"
-                    return 1
-                fi
-            else
-                unset_env VENV_AUTO_ACTIVATE_PATH
-                unset VENV_AUTO_ACTIVATE_PATH
-                echo "✅ Enabled auto-detection on directory change"
-            fi
-            ;;
-        off|0|false|no)
-            unset_env VENV_AUTO_ACTIVATE
-            unset_env VENV_AUTO_ACTIVATE_PATH
-            export VENV_AUTO_ACTIVATE="off"
-            unset VENV_AUTO_ACTIVATE_PATH
-            echo "❌ Disabled auto-activation"
-            ;;
-        *)
-            echo "❌ Invalid option: $mode"
-            echo "Usage: venv-auto [on|off|status|--help]"
-            return 1
-            ;;
-    esac
-}
-
 # Show comprehensive virtual environment status
 venv-status() {
     if [[ "$1" == "--help" ]]; then
@@ -948,12 +897,10 @@ venv-status() {
     local auto_flag="${VENV_AUTO_ACTIVATE:-off}"
     local auto_path="${VENV_AUTO_ACTIVATE_PATH:-none}"
     if [[ "${auto_flag:l}" == "on" ]]; then
-        echo "   ✅ Enabled"
+        echo "   ✅ Enabled (startup only)"
         if [[ "$auto_path" != "none" && -f "$auto_path" ]]; then
             echo "   🎯 Startup Environment: ${auto_path:h:t}"
             echo "   📄 Script: $auto_path"
-        else
-            echo "   🔍 Directory Detection: Enabled"
         fi
     else
         echo "   ❌ Disabled"
@@ -1013,9 +960,10 @@ venv-status() {
 
     echo ""
     echo "💡 Tips:"
-    echo "   • Use 'venv-auto on/off' to control auto-activation"
+    echo "   • Use 'venv-auto on/off' to control startup auto-activation"
     echo "   • Use 'venv-create' to create new environments"
     echo "   • Use 'venv-list' to see all stored environments"
+    echo "   • Use 'venv-activate' to activate an environment"
 }
 
 # List environments
@@ -1135,6 +1083,61 @@ venv-help() {
 }
 
 # ==============================================================================
+# Management Functions  
+# ==============================================================================
+
+# Auto-activation control
+venv-auto() {
+    local mode="${1:-status}"
+    
+    if [[ "$mode" == "--help" ]]; then
+        _venv_show_help "venv-auto"
+        return 0
+    fi
+
+    case "${mode:l}" in
+        status)
+            local current=$(print -r -- ${VENV_AUTO_ACTIVATE:-off})
+            local path="${VENV_AUTO_ACTIVATE_PATH:-none}"
+            echo "🔧 Auto-activation: $current"
+            echo "📁 Path: $path"
+            ;;
+        on|1|true|yes)
+            set_env VENV_AUTO_ACTIVATE on
+            export VENV_AUTO_ACTIVATE="on"
+            if [[ -n "$VIRTUAL_ENV" ]]; then
+                local activate_path="$VIRTUAL_ENV/bin/activate"
+                if [[ -f "$activate_path" ]]; then
+                    set_env VENV_AUTO_ACTIVATE_PATH "$activate_path"
+                    export VENV_AUTO_ACTIVATE_PATH="$activate_path"
+                    echo "✅ Enabled auto-activation for current venv"
+                    echo "   Path: $activate_path"
+                else
+                    echo "⚠️  Current venv activation script not found"
+                    return 1
+                fi
+            else
+                unset_env VENV_AUTO_ACTIVATE_PATH
+                unset VENV_AUTO_ACTIVATE_PATH
+                echo "✅ Enabled auto-activation at startup"
+            fi
+            ;;
+        off|0|false|no)
+            unset_env VENV_AUTO_ACTIVATE
+            unset_env VENV_AUTO_ACTIVATE_PATH
+            export VENV_AUTO_ACTIVATE="off"
+            unset VENV_AUTO_ACTIVATE_PATH
+            echo "❌ Disabled auto-activation"
+            ;;
+        *)
+            echo "❌ Invalid option: $mode"
+            echo "Usage: venv-auto [on|off|status|--help]"
+            return 1
+            ;;
+    esac
+}
+
+# ==============================================================================
 # Internal Helper Functions
 # ==============================================================================
 
@@ -1171,22 +1174,8 @@ _venv_auto_startup() {
     fi
 }
 
-# Auto-activation on directory change
-_venv_auto_chpwd() {
-    local flag="${VENV_AUTO_ACTIVATE:-off}"
-    if [[ "${flag:l}" != "on" ]]; then
-        return
-    fi
-
-    # Try to detect and activate venv in current directory (silently)
-    venv-detect >/dev/null 2>&1
-}
-
-# Set up chpwd hook for auto-activation (only once)
-if [[ ! "${chpwd_functions[(r)_venv_auto_chpwd]}" == "_venv_auto_chpwd" ]]; then
-    autoload -Uz add-zsh-hook
-    add-zsh-hook chpwd _venv_auto_chpwd
-fi
+# Call auto-startup on shell initialization
+_venv_auto_startup
 
 # ==============================================================================
 # Legacy compatibility (will be removed)

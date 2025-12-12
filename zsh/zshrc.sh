@@ -78,11 +78,6 @@ source $ZSH/oh-my-zsh.sh
 [[ -f ~/dotfiles/zsh/functions.sh ]] && source ~/dotfiles/zsh/functions.sh
 [[ -f ~/dotfiles/zsh/venv.sh ]] && source ~/dotfiles/zsh/venv.sh
 
-# Auto-activate virtual environment if configured
-if typeset -f _venv_auto_startup >/dev/null; then
-    _venv_auto_startup
-fi
-
 # Autosuggestions with performance settings (check disable flag)
 if [[ ! -f ~/.auto_suggestion_disable && -f $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source $HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
