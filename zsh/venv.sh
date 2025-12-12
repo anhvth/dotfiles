@@ -728,20 +728,24 @@ venv-select() {
     if [[ -e "$venv_path" ]] || [[ -L "$venv_path" ]]; then
         if [[ -L "$venv_path" ]]; then
             local link_target="$(readlink "$venv_path")"
-            echo "⚠️  Currently linked to different venv: $venv_path -> $link_target"
-        else
-            echo "⚠️  Path already exists: $venv_path"
-        fi
-        printf "Switch to '$selected_venv'? [y/N] "
-        read -r response
-        if [[ "$response" =~ ^[Yy]$ ]]; then
-            rm -rf "$venv_path" || {
-                echo "❌ Failed to remove $venv_path"
+            echo "🔄 Switching from: $(basename "$link_target") -> $selected_venv"
+            rm -f "$venv_path" || {
+                echo "❌ Failed to remove symlink $venv_path"
                 return 1
             }
         else
-            echo "❌ Aborted"
-            return 1
+            echo "⚠️  Path exists and is not a symlink: $venv_path"
+            printf "Remove it and create symlink to '$selected_venv'? [y/N] "
+            read -r response
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                rm -rf "$venv_path" || {
+                    echo "❌ Failed to remove $venv_path"
+                    return 1
+                }
+            else
+                echo "❌ Aborted"
+                return 1
+            fi
         fi
     fi
 
@@ -1177,6 +1181,5 @@ _venv_auto_startup() {
 # Call auto-startup on shell initialization
 _venv_auto_startup
 
-# ==============================================================================
-# Legacy compatibility (will be removed)
-# ==============================================================================
+# ALIAS
+alias atv="venv-select"
