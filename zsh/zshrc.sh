@@ -30,6 +30,7 @@ path=(
     $HOME/dotfiles/squashfs-root/usr/bin
     $HOME/dotfiles/tools/bin
     $HOME/dotfiles/bin/dist
+    $HOME/dotfiles/python_bin
     $HOME/dotfiles/custom-tools
     $HOME/.local/bin
     $HOME/.fzf/bin
