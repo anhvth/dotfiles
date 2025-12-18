@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+import os
+import sys
+
+# Directories to ignore
+IGNORE_DIRS = {
+    "__pycache__",
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    "build",
+    "dist",
+    ".eggs",
+    "docs",
+    "site",
+    "node_modules",
+}
+
+# Max number of lines for a function or class to be considered "short"
+MAX_LINES_PER_BLOCK = 30
+# Lines to show from the beginning and end of a long block
+EDGE_LINES = 5
+
+
+def get_indent(line: str) -> int:
+    """Calculates the indentation of a line."""
+    return len(line) - len(line.lstrip(" "))
+
+
+def is_block_start(line: str) -> bool:
+    """Checks if a line is the start of a class or function block."""
+    stripped = line.strip()
+    return stripped.startswith("def ") or stripped.startswith("class ")
+
+
+def process_file(file_path: str):
+    """
+    Prints the content of a Python file, trimming long functions and classes.
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+    except Exception as e:
+        print(f"--- Could not read file: {file_path} ({e}) ---", file=sys.stderr)
+        return
+
+    print(f"--- START OF FILE: {file_path} ---")
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        if is_block_start(line):
+            block_start_line_index = i
+            block_indent = get_indent(line)
+            
+            # Find the end of the block
+            j = i + 1
+            while j < len(lines):
+                next_line = lines[j]
+                if next_line.strip() == "": # Skip empty lines
+                    j += 1
+                    continue
+                
+                next_line_indent = get_indent(next_line)
+                if next_line_indent <= block_indent:
+                    break
+                j += 1
+            
+            block_end_line_index = j
+            block_lines = lines[block_start_line_index:block_end_line_index]
+            
+            if len(block_lines) > MAX_LINES_PER_BLOCK:
+                # Print header and beginning of the long block
+                print("".join(block_lines[:EDGE_LINES]), end="")
+                
+                # Ellipsis
+                ellipsis_indent = " " * (block_indent + 4)
+                print(f"{ellipsis_indent}# ... (trimmed {len(block_lines) - 2 * EDGE_LINES} lines) ...")
+                
+                # Print end of the long block
+                print("".join(block_lines[-EDGE_LINES:]), end="")
+                
+                i = block_end_line_index
+            else:
+                # Block is short enough, print it completely
+                print("".join(block_lines), end="")
+                i = block_end_line_index
+        else:
+            # Not a block start, just print the line
+            print(line, end="")
+            i += 1
+            
+    print(f"\n--- END OF FILE: {file_path} ---\\n")
+
+
+def main():
+    """
+    Main function to walk the directory tree and process Python files.
+    """
+    start_dir = "."
+    for root, dirs, files in os.walk(start_dir, topdown=True):
+        # Modify dirs in-place to prune the search
+        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                process_file(file_path)
+
+
+if __name__ == "__main__":
+    main()
