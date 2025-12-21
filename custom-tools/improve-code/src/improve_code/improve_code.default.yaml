@@ -1,0 +1,19 @@
+# improve-code configuration
+#
+# This file is used as the template for user config.
+# On first run, improve-code will copy this template into your project root
+# as `improve-code.yaml` and continue using it.
+
+# Path (relative to project root) to format/check.
+target: "src"
+
+# Directory (relative to project root) to store generated reports.
+logs_dir: "logs"
+
+# Directory names to exclude when scanning Python files.
+excluded_parts:
+  - ".venv"
+  - "venv"
+  - "__pycache__"
+  - ".git"
+  - "node_modules"

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "improve-code"
+version = "0.1.0"
+description = "Format, auto-fix, and report code quality using ruff."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "dotfiles" }]
+dependencies = ["pyyaml>=6.0.0"]
+
+[project.scripts]
+improve-code = "improve_code.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/improve_code"]
+include = ["src/improve_code/improve_code.default.yaml"]

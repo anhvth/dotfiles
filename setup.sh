@@ -654,6 +654,35 @@ install_pytools() {
     log_success "${ICON_PYTHON} pytools installed."
 }
 
+install_improve_code() {
+    log_info "${ICON_PYTHON} Installing improve-code..."
+
+    local improve_code_dir="${DOTFILES_DIR}/custom-tools/improve-code"
+
+    if [[ ! -d "$improve_code_dir" ]]; then
+        log_warning "${ICON_WARN} improve-code directory not found at $improve_code_dir"
+        return 1
+    fi
+
+    # Check for uv or pip
+    if command_exists uv; then
+        log_info "${ICON_PYTHON} Using uv to install improve-code..."
+        (cd "$improve_code_dir" && uv pip install -e .)
+    elif command_exists pip3; then
+        log_info "${ICON_PYTHON} Using pip to install improve-code..."
+        (cd "$improve_code_dir" && pip3 install -e .)
+    elif command_exists pip; then
+        log_info "${ICON_PYTHON} Using pip to install improve-code..."
+        (cd "$improve_code_dir" && pip install -e .)
+    else
+        log_warning "${ICON_WARN} Neither uv nor pip found. Skipping improve-code installation."
+        log_info "${ICON_INFO} Install pip/uv and run: cd $improve_code_dir && pip install -e ."
+        return 1
+    fi
+
+    log_success "${ICON_PYTHON} improve-code installed."
+}
+
 setup_dotfiles() {
     log_info "${ICON_CONFIG} Setting up dotfiles..."
     
@@ -890,6 +919,15 @@ main() {
         install_pytools
     else
         log_info "${ICON_INFO} Skipping pytools installation."
+    fi
+
+    echo "─────────────────────────────────────────────────────────────"
+
+    # Step 9.5: Install improve-code
+    if confirm "Install improve-code?" "y"; then
+        install_improve_code
+    else
+        log_info "${ICON_INFO} Skipping improve-code installation."
     fi
     
     echo "─────────────────────────────────────────────────────────────"
