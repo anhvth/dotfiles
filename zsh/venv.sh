@@ -441,7 +441,15 @@ venv-activate() {
     
     # Rebuild PS1 with the new prompt name
     if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
-        PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+        local base_prompt="${_OLD_VIRTUAL_PS1}"
+        if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
+            base_prompt="${base_prompt#"$cname | "}"
+        fi
+        if [[ -n "$cname" ]]; then
+            PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
+        else
+            PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
+        fi
         export PS1
     fi
     
@@ -711,7 +719,15 @@ venv-select() {
                 export VIRTUAL_ENV_PROMPT="$selected_venv"
                 # Rebuild PS1 with the new prompt name
                 if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
-                    PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+                    local base_prompt="${_OLD_VIRTUAL_PS1}"
+                    if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
+                        base_prompt="${base_prompt#"$cname | "}"
+                    fi
+                    if [[ -n "$cname" ]]; then
+                        PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
+                    else
+                        PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
+                    fi
                     export PS1
                 fi
                 set_env VENV_AUTO_ACTIVATE on
@@ -1172,7 +1188,15 @@ _venv_auto_startup() {
         export VIRTUAL_ENV_PROMPT="$real_venv_name"
         # Rebuild PS1 with the new prompt name
         if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
-            PS1="(${VIRTUAL_ENV_PROMPT}) ${_OLD_VIRTUAL_PS1}"
+            local base_prompt="${_OLD_VIRTUAL_PS1}"
+            if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
+                base_prompt="${base_prompt#"$cname | "}"
+            fi
+            if [[ -n "$cname" ]]; then
+                PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
+            else
+                PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
+            fi
             export PS1
         fi
     fi
