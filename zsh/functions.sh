@@ -325,15 +325,32 @@ update_dotfiles() {
 #     cp "$initfile" "$targetfile"
 # }
 
+# Usage:
+#   proxy 3128   -> test + enable proxy
+#   proxy 0      -> disable proxy
+
 test_proxy() {
-    output=$(curl -x 127.0.0.1:$1 https://www.google.com -I)
-    if echo "$output" | grep -q "200"; then
-        echo "Proxy is working"
-    else
-        echo "Proxy is not working"
-    fi
+  curl -x "http://127.0.0.1:$1" -I https://www.google.com \
+    --connect-timeout 5 --max-time 10 -s \
+    | grep -q "200"
 }
 
+proxy() {
+  if [ "$1" = "0" ]; then
+    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    echo "Proxy disabled"
+    return
+  fi
+
+  if test_proxy "$1"; then
+    export http_proxy="http://127.0.0.1:$1"
+    export https_proxy="http://127.0.0.1:$1"
+    echo "SUCESS Proxy set to 127.0.0.1:$1"
+  else
+    echo "FAIL Proxy test failed on port $1"
+    return 1
+  fi
+}
 keep_ssh() {
     export AUTOSSH_GATETIME=0
     export AUTOSSH_PORT=0

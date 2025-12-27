@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""
+cat_jsonl - Display JSONL files with nice formatting
+
+Usage:
+    cat_jsonl <file> [num_lines] [--tabulate]
+    cat <file> | cat_jsonl [num_lines] [--tabulate]
+"""
+
+import sys
+import json
+import argparse
+import subprocess
+from typing import List, Dict, Any
+
+
+def load_jsonl_lines(file_handle, num_lines: int) -> List[Dict[str, Any]]:
+    """Load first num_lines from JSONL file."""
+    data = []
+    for i, line in enumerate(file_handle):
+        if i >= num_lines:
+            break
+        line = line.strip()
+        if line:
+            try:
+                data.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                print(f"Error parsing line {i+1}: {e}", file=sys.stderr)
+                continue
+    return data
+
+
+def print_pretty(data: List[Dict[str, Any]], use_tabulate: bool = False):
+    """Print data in nice format."""
+    if not data:
+        print("No data to display")
+        return
+    
+    if use_tabulate:
+        try:
+            from tabulate import tabulate
+            print(tabulate(data, headers="keys", tablefmt="grid"))
+        except ImportError:
+            print("tabulate not installed. Installing...", file=sys.stderr)
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "tabulate", "-q"])
+                from tabulate import tabulate
+                print(tabulate(data, headers="keys", tablefmt="grid"))
+            except Exception as e:
+                print(f"Failed to install tabulate: {e}", file=sys.stderr)
+                print("Falling back to JSON output...", file=sys.stderr)
+                for item in data:
+                    print(json.dumps(item, indent=2, ensure_ascii=False))
+    else:
+        for item in data:
+            print(json.dumps(item, indent=2, ensure_ascii=False))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Display JSONL files with nice formatting",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  cat_jsonl data.jsonl 10           # Show first 10 lines
+  cat_jsonl data.jsonl 10 --tabulate # Show first 10 lines as table
+  cat data.jsonl | cat_jsonl 5      # Pipe input, show 5 lines
+        """
+    )
+    parser.add_argument('file', nargs='?', help='JSONL file to read (or read from stdin)')
+    parser.add_argument('num_lines', type=int, nargs='?', default=10, 
+                        help='Number of lines to display (default: 10)')
+    parser.add_argument('--tabulate', action='store_true', 
+                        help='Format output as table using tabulate')
+    
+    args = parser.parse_args()
+    
+    # Determine input source
+    if args.file and args.file != '-':
+        try:
+            with open(args.file, 'r', encoding='utf-8') as f:
+                data = load_jsonl_lines(f, args.num_lines)
+        except FileNotFoundError:
+            print(f"Error: File '{args.file}' not found", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error reading file: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        # Read from stdin
+        data = load_jsonl_lines(sys.stdin, args.num_lines)
+    
+    print_pretty(data, args.tabulate)
+
+
+if __name__ == '__main__':
+    main()
