@@ -13,6 +13,7 @@ alias dk='docker kill'
 # Git aliases
 alias gg='git status'
 alias gu='git add -A && git commit -m "lazy comment" && git push'
+alias git-clone='git clone https://github.com/'
 
 # TensorBoard alias
 alias tb='tensorboard --logdir '
