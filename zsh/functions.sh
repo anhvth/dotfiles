@@ -630,3 +630,25 @@ tree_project() {
     echo "Project code structure saved to $output_file"
 }
 
+fix_group_dir() {
+  # usage: fix_group_dir <folder> <group>
+  local DIR="$1"
+  local GROUP="$2"
+
+  if [[ -z "$DIR" || -z "$GROUP" ]]; then
+    echo "Usage: fix_group_dir <folder> <group>"
+    return 1
+  fi
+
+  sudo chgrp -R "$GROUP" "$DIR"
+
+  # dirs: rwx + setgid, files: rw
+  sudo find "$DIR" -type d -exec chmod 2775 {} \;
+  sudo find "$DIR" -type f -exec chmod 664 {} \;
+
+  # enforce group rw even with bad umask
+  sudo setfacl -R -m g:"$GROUP":rwX "$DIR"
+  sudo setfacl -R -d -m g:"$GROUP":rwX "$DIR"
+
+  echo "OK: group '$GROUP' has rw access on $DIR"
+}
