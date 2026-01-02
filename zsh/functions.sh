@@ -330,9 +330,15 @@ update_dotfiles() {
 #   proxy 0      -> disable proxy
 
 test_proxy() {
-  curl -x "http://127.0.0.1:$1" -I https://www.google.com \
+  if curl -x "http://127.0.0.1:$1" -I https://www.google.com \
     --connect-timeout 5 --max-time 10 -s \
-    | grep -q "200"
+    | grep -q "200"; then
+    echo "SUCESS"
+    return 0
+  else
+    echo "FAIL"
+    return 1
+  fi
 }
 
 proxy() {
