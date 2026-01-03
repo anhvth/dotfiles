@@ -330,9 +330,15 @@ update_dotfiles() {
 #   proxy 0      -> disable proxy
 
 test_proxy() {
-  curl -x "http://127.0.0.1:$1" -I https://www.google.com \
+  if curl -x "http://127.0.0.1:$1" -I https://www.google.com \
     --connect-timeout 5 --max-time 10 -s \
-    | grep -q "200"
+    | grep -q "200"; then
+    echo "SUCESS"
+    return 0
+  else
+    echo "FAIL"
+    return 1
+  fi
 }
 
 proxy() {
@@ -633,6 +639,7 @@ test-connection() {
   local host="$1"
   [[ -z "$host" ]] && { echo "usage: test-connection <ssh-host>"; return 1; }
 
+<<<<<<< HEAD
   local size_mb=20
   local tmp="/tmp/conn-test-$$"
 
@@ -669,3 +676,27 @@ test-connection() {
   echo "  If upload/download appears → link OK"
   echo "  If hangs → proxy/container networking issue"
 }
+=======
+fix_group_dir() {
+  # usage: fix_group_dir <folder> <group>
+  local DIR="$1"
+  local GROUP="$2"
+
+  if [[ -z "$DIR" || -z "$GROUP" ]]; then
+    echo "Usage: fix_group_dir <folder> <group>"
+    return 1
+  fi
+
+  sudo chgrp -R "$GROUP" "$DIR"
+
+  # dirs: rwx + setgid, files: rw
+  sudo find "$DIR" -type d -exec chmod 2775 {} \;
+  sudo find "$DIR" -type f -exec chmod 664 {} \;
+
+  # enforce group rw even with bad umask
+  sudo setfacl -R -m g:"$GROUP":rwX "$DIR"
+  sudo setfacl -R -d -m g:"$GROUP":rwX "$DIR"
+
+  echo "OK: group '$GROUP' has rw access on $DIR"
+}
+>>>>>>> 0d1e4aee84ae056e9f8426d43a8ed474b8659056

@@ -13,6 +13,7 @@ alias dk='docker kill'
 # Git aliases
 alias gg='git status'
 alias gu='git add -A && git commit -m "lazy comment" && git push'
+alias git-clone='git clone https://github.com/'
 
 # TensorBoard alias
 alias tb='tensorboard --logdir '
@@ -32,6 +33,7 @@ alias checksize='sudo du -h ./ | sort -rh | head -n30'
 alias gpus='watch -n0.1 nvidia-smi'
 alias what-is-my-ip='wget -qO- https://ipecho.net/plain ; echo'
 alias kill_processes='awk "{print \$2}" | xargs kill'
+alias no-proxy='unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ftp_proxy FTP_PROXY all_proxy ALL_PROXY no_proxy NO_PROXY'
 
 # Rsync aliases
 alias rs='rsync -av --progress'

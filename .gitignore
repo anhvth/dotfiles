@@ -25,3 +25,5 @@ zsh/plugins/zsh-syntax-highlighting/
 
 node_modules
 pylance_errors.json
+.gemini/
+gha-creds-*.json
