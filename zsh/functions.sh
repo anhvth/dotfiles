@@ -629,4 +629,43 @@ tree_project() {
 
     echo "Project code structure saved to $output_file"
 }
+test-connection() {
+  local host="$1"
+  [[ -z "$host" ]] && { echo "usage: test-connection <ssh-host>"; return 1; }
 
+  local size_mb=20
+  local tmp="/tmp/conn-test-$$"
+
+  echo "== SSH target: $host =="
+  echo
+
+  echo "[1] SSH handshake latency"
+  /usr/bin/time -f "  real %e s" \
+    ssh -o BatchMode=yes -o ConnectTimeout=5 -o ControlMaster=no "$host" exit 2>/dev/null
+  echo
+
+  echo "[2] TCP latency (best-effort)"
+  ssh -o ConnectTimeout=5 -o ControlMaster=no "$host" \
+    "command -v curl >/dev/null && curl -m 3 -o /dev/null -s -w '  connect=%{time_connect}s total=%{time_total}s\n' https://1.1.1.1 || echo '  curl unavailable / blocked'"
+  echo
+
+  echo "[3] SCP throughput (${size_mb}MB, timeout-safe)"
+
+  dd if=/dev/zero of="$tmp" bs=1m count=$size_mb 2>/dev/null
+
+  echo "  upload:"
+  scp -v -o ConnectTimeout=5 -o ControlMaster=no "$tmp" "$host:/tmp/conn-test" 2>&1 \
+    | awk '/Transferred:/ {print "    " $0}'
+
+  echo "  download:"
+  scp -v -o ConnectTimeout=5 -o ControlMaster=no "$host:/tmp/conn-test" "$tmp.dl" 2>&1 \
+    | awk '/Transferred:/ {print "    " $0}'
+
+  rm -f "$tmp" "$tmp.dl"
+  ssh -o ConnectTimeout=5 -o ControlMaster=no "$host" "rm -f /tmp/conn-test" >/dev/null 2>&1
+  echo
+
+  echo "[4] Verdict"
+  echo "  If upload/download appears → link OK"
+  echo "  If hangs → proxy/container networking issue"
+}
