@@ -638,6 +638,7 @@ tree_project() {
 test-connection() {
   local host="$1"
   [[ -z "$host" ]] && { echo "usage: test-connection <ssh-host>"; return 1; }
+}
 
 fix_group_dir() {
   # usage: fix_group_dir <folder> <group>
