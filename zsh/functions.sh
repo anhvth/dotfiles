@@ -658,3 +658,12 @@ fix_group_dir() {
 
   echo "OK: group '$GROUP' has rw access on $DIR"
 }
+
+check_memory() {
+  # usage: check_memory [limit]
+  local LIMIT="${1:-10}"
+  
+  echo "PID   %MEM  RSS(KB) COMMAND"
+  # Sort by %mem (descending), skip the header with tail, then take the top N
+  ps axo pid,pmem,rss,comm --sort=-%mem | head -n "$((LIMIT + 1))"
+}
