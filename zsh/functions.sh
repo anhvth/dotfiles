@@ -1,3 +1,8 @@
+checksize() {
+    local dir="${1:-.}"
+    du -h -d 1 "$dir" | sort -rh | head -n30
+}
+
 rs-git-sync() {
     x="rsync -avzhe ssh --progress --filter=':- .gitignore' $1 $2 --delete"
     watch $x
