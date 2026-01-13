@@ -338,7 +338,7 @@ test_proxy() {
   if curl -x "http://127.0.0.1:$1" -I https://www.google.com \
     --connect-timeout 5 --max-time 10 -s \
     | grep -q "200"; then
-    echo "SUCESS"
+    echo "SUCCESS"
     return 0
   else
     echo "FAIL"
@@ -356,7 +356,7 @@ proxy() {
   if test_proxy "$1"; then
     export http_proxy="http://127.0.0.1:$1"
     export https_proxy="http://127.0.0.1:$1"
-    echo "SUCESS Proxy set to 127.0.0.1:$1"
+    echo "SUCCESS Proxy set to 127.0.0.1:$1"
   else
     echo "FAIL Proxy test failed on port $1"
     return 1
