@@ -369,28 +369,15 @@ venv-activate() {
 
     # Determine target
     if [[ -z "$target" ]]; then
-        # Check if .venv/bin/activate exists in current directory
-        if [[ -f ".venv/bin/activate" ]]; then
-            local current_venv_path="$(realpath .venv)"
-            # If already in the same venv, show status; otherwise activate local .venv
-            if [[ -n "$VIRTUAL_ENV" && "$(realpath "$VIRTUAL_ENV")" == "$current_venv_path" ]]; then
-                echo "ℹ️  Virtual environment already active: $(basename "$VIRTUAL_ENV")"
-                echo "📁 Path: $VIRTUAL_ENV"
-                echo "💡 Use 'vs' to switch to another environment"
-                return 0
-            else
-                target=".venv"
-            fi
+    if [[ -f ".venv/bin/activate" ]]; then
+        local current_venv_path="$(realpath .venv)"
+        if [[ -n "$VIRTUAL_ENV" && "$(realpath "$VIRTUAL_ENV")" == "$current_venv_path" ]]; then
+            echo "ℹ️  Virtual environment already active: $(basename "$VIRTUAL_ENV")"
+            return 0
         else
-            # No local .venv found, show selection
-            if [[ -n "$VIRTUAL_ENV" ]]; then
-                echo "ℹ️  Current environment: $(basename "$VIRTUAL_ENV")"
-                echo "ℹ️  No .venv/bin/activate found in current directory"
-            else
-                echo "ℹ️  No .venv/bin/activate found in current directory"
-            fi
-            echo "🔍 Select from available environments:"
-            venv-select
+            target=".venv"
+        fi
+    else
             return $?
         fi
     fi
@@ -439,19 +426,18 @@ venv-activate() {
     local real_venv_name="$(basename "$real_venv_path")"
     export VIRTUAL_ENV_PROMPT="$real_venv_name"
     
-    # Rebuild PS1 with the new prompt name
+    # --- REPLACED CNAME LOGIC HERE ---
+    local current_host=$(hostname)
     if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
         local base_prompt="${_OLD_VIRTUAL_PS1}"
-        if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
-            base_prompt="${base_prompt#"$cname | "}"
+        # Remove any hostname prefix pattern (anything before " | ")
+        if [[ "$base_prompt" == *" | "* ]]; then
+            base_prompt="${base_prompt#* | }"
         fi
-        if [[ -n "$cname" ]]; then
-            PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
-        else
-            PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
-        fi
+        PS1="$current_host | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
         export PS1
     fi
+    # ---------------------------------
     
     # Enable auto-activation
     set_env VENV_AUTO_ACTIVATE on
@@ -718,16 +704,14 @@ venv-select() {
                 # Set meaningful prompt name
                 export VIRTUAL_ENV_PROMPT="$selected_venv"
                 # Rebuild PS1 with the new prompt name
+                local current_host=$(hostname)
                 if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
                     local base_prompt="${_OLD_VIRTUAL_PS1}"
-                    if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
-                        base_prompt="${base_prompt#"$cname | "}"
+                    # Remove any hostname prefix pattern (anything before " | ")
+                    if [[ "$base_prompt" == *" | "* ]]; then
+                        base_prompt="${base_prompt#* | }"
                     fi
-                    if [[ -n "$cname" ]]; then
-                        PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
-                    else
-                        PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
-                    fi
+                    PS1="$current_host | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
                     export PS1
                 fi
                 set_env VENV_AUTO_ACTIVATE on
@@ -1187,16 +1171,14 @@ _venv_auto_startup() {
         local real_venv_name="$(basename "$real_venv_path")"
         export VIRTUAL_ENV_PROMPT="$real_venv_name"
         # Rebuild PS1 with the new prompt name
+        local current_host=$(hostname)
         if [[ -n "${_OLD_VIRTUAL_PS1:-}" ]]; then
             local base_prompt="${_OLD_VIRTUAL_PS1}"
-            if [[ -n "$cname" && "$base_prompt" == "$cname | "* ]]; then
-                base_prompt="${base_prompt#"$cname | "}"
+            # Remove any hostname prefix pattern (anything before " | ")
+            if [[ "$base_prompt" == *" | "* ]]; then
+                base_prompt="${base_prompt#* | }"
             fi
-            if [[ -n "$cname" ]]; then
-                PS1="$cname | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
-            else
-                PS1="(${VIRTUAL_ENV_PROMPT}) $base_prompt"
-            fi
+            PS1="$current_host | (${VIRTUAL_ENV_PROMPT}) $base_prompt"
             export PS1
         fi
     fi
