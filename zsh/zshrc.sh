@@ -69,9 +69,6 @@ ZSH_THEME="robbyrussell"
 
 # Load all configurations
 [[ -r ~/.env ]] && source ~/.env
-if [[ -z "$cname" ]]; then
-    echo "CNAME is not set. Please run 'set-env' to set it."
-fi
 
 # Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh
