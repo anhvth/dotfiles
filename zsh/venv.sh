@@ -470,6 +470,18 @@ venv-deactivate() {
     local old_env="$VIRTUAL_ENV"
     deactivate 2>/dev/null || true
     
+    # Restore hostname prefix to prompt if it exists
+    local current_host=$(hostname)
+    if [[ -n "$cname" ]]; then
+        current_host="$cname"
+    fi
+    
+    # Check if PS1 needs hostname prefix restored
+    if [[ "$PS1" != "$current_host | "* ]]; then
+        PS1="$current_host | $PS1"
+        export PS1
+    fi
+    
     # Disable auto-activation
     set_env VENV_AUTO_ACTIVATE off
     unset_env VENV_AUTO_ACTIVATE_PATH
